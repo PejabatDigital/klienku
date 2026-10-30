@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>KlienKu</title>
+<meta name="description" content="Who to follow up with today, so no client is ever forgotten.">
+<meta name="theme-color" content="#F5F4F1">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KlienKu">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <img class="logo" src="/icons/icon.svg" alt="" width="88" height="88">
+    <h1 class="wordmark">Klien<span>Ku</span></h1>
+    <p class="tagline">Who to follow up with today, so no client is ever forgotten.</p>
+  </header>
+
+  <section class="card" aria-labelledby="notifyTitle">
+    <p class="eyebrow">Setup check</p>
+    <h2 id="notifyTitle">Test notifications</h2>
+    <div id="notify"></div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <footer class="foot">{ kasah kod }</footer>
+</main>
+<script type="module" src="/src/app.js"></script>
+</body>
+</html>

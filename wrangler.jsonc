@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // The "klienku" Worker, deployed by Workers Builds whenever main changes.
+  "name": "klienku",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-12",
+
+  // klienku.kasahkod.cc is created and pointed here on deploy (kasahkod.cc is on this account).
+  "routes": [
+    { "pattern": "klienku.kasahkod.cc", "custom_domain": true }
+  ],
+
+  // The built app (npm run build → dist/). Only /api/* runs Worker code; everything else
+  // is served straight from assets, and unknown paths fall back to index.html.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Web Push. The matching secret VAPID_PRIVATE_KEY is set with
+  // `npx wrangler secret put VAPID_PRIVATE_KEY`, never here.
+  "vars": {
+    "VAPID_PUBLIC_KEY": "BAlKmwJF13HZZEfeKagylXKmbU0U8aAQ64VwaeigruUz_LmwdTdTPTf7BSblqPrwiDw-SLNEjRzd_jZvJIQqpY4",
+    "VAPID_SUBJECT": "mailto:hello@kasahkod.cc"
+  }
+}
