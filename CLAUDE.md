@@ -50,8 +50,9 @@ to use later: not tied to any industry or company. A Kasah Kod app.
    - Secret `VAPID_PRIVATE_KEY` is set (Amin adds secrets himself; Claude can't).
    - The desktop app's browser pane can't register service workers: test push and
      offline on a real device.
-2. **Foundation** — D1 database (clients, history, settings), sign-in for Amin's account.
-   Test: sign in on iPhone and Mac.
+2. ✅ **Foundation** — D1 database (clients, history, settings), sign-in for Amin's account.
+   Test: sign in on iPhone and Mac. Confirmed by Amin 31 Oct 2026: account created,
+   emails arrive, signed in on iPhone and Mac.
    - D1 `klienku-production` (APAC), tables in `migrations/0001_init.sql`: Better Auth's
      `user`/`session`/`account`/`verification`, plus `clients`, `activity`, `settings`,
      `push_subscriptions`. Apply with `npx wrangler d1 migrations apply DB --remote`.
