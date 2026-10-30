@@ -24,10 +24,17 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // Web Push. The matching secret VAPID_PRIVATE_KEY is set with
-  // `npx wrangler secret put VAPID_PRIVATE_KEY`, never here.
+  // Secrets, set with `npx wrangler secret put <NAME>` (or .dev.vars locally), never here:
+  // VAPID_PRIVATE_KEY (Web Push), BETTER_AUTH_SECRET (sign-in), RESEND_API_KEY (emails).
+  // OPEN_SIGNUP "false": only the first account can be created (Amin's).
   "vars": {
+    "BETTER_AUTH_URL": "https://klienku.kasahkod.cc",
+    "OPEN_SIGNUP": "false",
     "VAPID_PUBLIC_KEY": "BAlKmwJF13HZZEfeKagylXKmbU0U8aAQ64VwaeigruUz_LmwdTdTPTf7BSblqPrwiDw-SLNEjRzd_jZvJIQqpY4",
     "VAPID_SUBJECT": "mailto:hello@kasahkod.cc"
-  }
+  },
+
+  "d1_databases": [
+    { "binding": "DB", "database_name": "klienku-production", "database_id": "ac7d55a7-3cc4-4634-9e79-8efb85157b2b", "migrations_dir": "migrations" }
+  ]
 }

@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "dev:api": "wrangler dev --port 8787"
+    "dev:api": "wrangler dev --port 8787 --local-upstream localhost:8787"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -16,5 +16,8 @@
   "devDependencies": {
     "vite": "8.3.4",
     "wrangler": "4.151.0"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.7"
   }
 }

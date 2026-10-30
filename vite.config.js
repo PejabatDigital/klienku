@@ -25,6 +25,7 @@ function serviceWorker(){
 
 export default defineConfig({
   plugins: [serviceWorker()],
+  build: { rollupOptions: { input: { main: "index.html", signin: "signin.html" } } },
   // npm run dev:api runs the Worker on 8787
   server: { proxy: { "/api": "http://localhost:8787" } }
 });

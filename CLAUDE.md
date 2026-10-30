@@ -52,6 +52,21 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      offline on a real device.
 2. **Foundation** — D1 database (clients, history, settings), sign-in for Amin's account.
    Test: sign in on iPhone and Mac.
+   - D1 `klienku-production` (APAC), tables in `migrations/0001_init.sql`: Better Auth's
+     `user`/`session`/`account`/`verification`, plus `clients`, `activity`, `settings`,
+     `push_subscriptions`. Apply with `npx wrangler d1 migrations apply DB --remote`.
+   - Better Auth email + password (`worker/auth.js`, PBKDF2 as MyDay), 60-day sessions.
+     Only the first account can be created (`OPEN_SIGNUP` "false"); it must confirm its
+     email. A password reset signs out every other device.
+   - One page `/signin` (`signin.html`, `src/signin.js`) for Figma 12–15: sign in,
+     first-time setup (only while no account exists), forgot password, check your email
+     (Open Mail on iPhone/iPad, resend after 45 s), set a new password (live rules).
+     Two-step code (Figma 16) is not built; first-time setup (17) waits for Phase 4.
+   - Home page sends signed-out people to `/signin`; shows who's signed in + Sign out.
+     `/api/push/test` needs sign-in and saves the device in `push_subscriptions`.
+   - Local: `npm run dev:api` (`--local-upstream localhost:8787`, because the custom
+     domain route otherwise makes requests look like they come from klienku.kasahkod.cc).
+     Without `RESEND_API_KEY`, emails print in the terminal.
 3. **Core loop** — Add client + list, client detail + edit, Mark done → next step, Today,
    Close + Delete, Settings (follow-up defaults). Test: add 5 real clients.
 4. **Reminders** — notification when a step is due, 8:00 am morning summary.

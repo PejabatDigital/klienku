@@ -10,6 +10,7 @@
   color-scheme: light;
 }
 *{ box-sizing:border-box; }
+[hidden]{ display:none !important; }
 html,body{ margin:0; }
 body{
   background:var(--bg); color:var(--text); font:15px/22px var(--font);
@@ -49,3 +50,62 @@ body{
 .status.err{ color:var(--overdue); }
 
 .foot{ margin-top:auto; text-align:center; font-size:12px; color:var(--text-muted); opacity:.7; }
+
+/* ── Sign-in pages (Figma 12–15) ── */
+.auth{
+  max-width:420px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 24px);
+}
+
+.back{
+  align-self:flex-start; display:flex; align-items:center; gap:4px; margin:0 0 24px -6px; padding:6px;
+  background:none; border:0; color:var(--accent); font:500 17px/22px var(--font); cursor:pointer;
+}
+.back svg, .badge svg, .note svg{ fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.back svg{ width:22px; height:22px; }
+.brand{ display:flex; align-items:center; gap:12px; margin:40px 0 32px; }
+.brand img{ border-radius:14px; box-shadow:0 1px 2px rgba(28,27,25,.06), 0 4px 12px rgba(28,27,25,.06); }
+.wordmark-sm{ font-size:24px; line-height:28px; font-weight:700; letter-spacing:-.02em; color:var(--navy); }
+.wordmark-sm span{ color:var(--brand-orange); }
+.badge{ width:64px; height:64px; border-radius:18px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; margin:0 0 20px; }
+.badge svg{ width:28px; height:28px; }
+.auth h1{ margin:0 0 8px; font-size:28px; line-height:34px; font-weight:700; letter-spacing:-.02em; }
+.lead{ margin:0 0 24px; color:var(--text-muted); }
+#form{ display:flex; flex-direction:column; gap:12px; }
+.field{
+  position:relative; display:flex; flex-direction:column; gap:2px; padding:9px 14px 7px;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; cursor:text;
+}
+.field:focus-within{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.field > span{ font-size:12px; line-height:16px; color:var(--text-muted); }
+.field input{ border:0; outline:0; padding:0; background:none; font:400 17px/24px var(--font); color:var(--text); width:100%; }
+.field input::placeholder{ color:#A8A49D; }
+.field:has(.show) input{ padding-right:56px; }
+.show{ position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:0; padding:8px 0; color:var(--accent); font:600 15px/20px var(--font); cursor:pointer; }
+.forgot{ align-self:flex-end; color:var(--accent); font-weight:600; text-decoration:none; padding:4px 0; }
+.rules{ list-style:none; margin:4px 0; padding:0; display:grid; gap:6px; color:var(--text-muted); }
+.rules li{ display:flex; align-items:center; gap:10px; }
+.rules li::before{ content:""; width:14px; height:14px; border:1.5px solid #B5B1AA; border-radius:50%; box-sizing:border-box; }
+.rules li.ok{ color:var(--won); }
+.rules li.ok::before{
+  border:0; border-radius:0; width:16px; height:16px; background:var(--won);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.btn-lg{ min-height:52px; border-radius:12px; font-size:17px; text-decoration:none; }
+.msg{ margin:0; min-height:0; font-weight:500; color:var(--won); }
+.msg:empty{ display:none; }
+.msg.err{ color:var(--overdue); }
+.sent .btn{ margin-top:0; }
+.resend{ text-align:center; color:var(--text-muted); margin:16px 0 0; }
+.resend button{ background:none; border:0; padding:4px; font:600 15px/22px var(--font); color:var(--accent); cursor:pointer; }
+.resend button:disabled{ color:var(--text-muted); cursor:default; }
+.auth-foot{ margin-top:auto; padding-top:32px; }
+.note{ display:flex; align-items:center; justify-content:center; gap:8px; margin:0; font-size:13px; color:var(--text-muted); }
+.note svg{ width:16px; height:16px; }
+.tip{ margin:0; padding:12px 14px; border-radius:12px; background:var(--subtle); font-size:13px; color:var(--text-muted); }
+
+/* ── Signed-in bar on the home page ── */
+.account{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.account p{ margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account .btn{ width:auto; flex-shrink:0; white-space:nowrap; margin:0; padding:0 16px; min-height:36px; font-size:14px; }

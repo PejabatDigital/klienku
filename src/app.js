@@ -1,6 +1,8 @@
-/* Phase 1 home page: the KlienKu logo and a notification check for this device. */
+/* Home page (until Phase 3 brings Today): who's signed in, and a notification check for
+   this device. Signed out → /signin. */
 import { registerSW, isIOS } from "./pwa.js";
 import { pushState, sendTest } from "./push.js";
+import { currentUser, signOut } from "./account.js";
 
 const box = document.getElementById("notify");
 const status = document.getElementById("status");
@@ -47,5 +49,16 @@ async function test(delay){
   }
 }
 
-registerSW();
-render();
+async function start(){
+  registerSW();
+  const user = await currentUser();
+  if (!user) return location.replace("/signin");
+  document.getElementById("who").textContent = user.email;
+  document.getElementById("account").hidden = false;
+  document.getElementById("signOut").addEventListener("click", async ()=>{
+    try { await signOut(); location.replace("/signin"); }
+    catch(e){ say("Couldn't sign out. Check your connection and try again.", "err"); }
+  });
+  render();
+}
+start();
