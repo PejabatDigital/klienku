@@ -42,9 +42,14 @@ to use later: not tied to any industry or company. A Kasah Kod app.
 - Keep this file current when a decision changes. `README.md` is for people; keep it short.
 
 ## Phases
-1. **Set up** — project, GitHub, icons + manifest (Add to Home Screen), simple home page,
+1. ✅ **Set up** — project, GitHub, icons + manifest (Add to Home Screen), simple home page,
    iPhone notification test (`/api/push/test`, open to anyone for now, only sends to
    known push services; goes behind sign-in in Phase 2), live on klienku.kasahkod.cc.
+   Confirmed by Amin 30 Oct 2026: a notification arrived on his locked iPhone.
+   - Workers Builds has no build command; `wrangler.jsonc` `build.command` runs it.
+   - Secret `VAPID_PRIVATE_KEY` is set (Amin adds secrets himself; Claude can't).
+   - The desktop app's browser pane can't register service workers: test push and
+     offline on a real device.
 2. **Foundation** — D1 database (clients, history, settings), sign-in for Amin's account.
    Test: sign in on iPhone and Mac.
 3. **Core loop** — Add client + list, client detail + edit, Mark done → next step, Today,
