@@ -17,39 +17,12 @@ body{
   -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
 }
 
-.page{
-  max-width:440px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; gap:24px;
-  padding:calc(env(safe-area-inset-top) + 48px) 20px calc(env(safe-area-inset-bottom) + 24px);
-}
-
-.hero{ text-align:center; }
-.logo{ display:block; margin:0 auto 16px; border-radius:20px; box-shadow:0 1px 2px rgba(28,27,25,.06), 0 8px 24px rgba(28,27,25,.08); }
-.wordmark{ margin:0; font-size:34px; line-height:40px; font-weight:700; letter-spacing:-.02em; color:var(--navy); }
-.wordmark span{ color:var(--brand-orange); }
-.tagline{ margin:8px auto 0; max-width:300px; color:var(--text-muted); }
-
-.card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px; }
-.card h2{ margin:0 0 8px; font-size:17px; line-height:24px; font-weight:600; }
-.card p{ margin:0 0 12px; }
-.eyebrow{ margin:0 0 4px !important; font-size:12px; line-height:16px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
-.muted{ color:var(--text-muted); }
-.steps{ margin:0 0 4px; padding-left:22px; }
-.steps li{ margin:0 0 6px; }
-
 .btn{
-  display:flex; align-items:center; justify-content:center; width:100%; min-height:48px; margin-top:8px;
-  border:0; border-radius:999px; font:600 15px/20px var(--font); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:48px; margin-top:8px;
+  border:0; border-radius:999px; font:600 15px/20px var(--font); cursor:pointer; text-decoration:none;
 }
 .btn-primary{ background:var(--accent); color:var(--on-accent); }
-.btn-secondary{ background:var(--subtle); color:var(--text); }
 .btn:disabled{ opacity:.5; cursor:default; }
-
-.status{ margin:12px 0 0 !important; min-height:22px; font-weight:500; }
-.status:empty{ display:none; }
-.status.ok{ color:var(--won); }
-.status.err{ color:var(--overdue); }
-
-.foot{ margin-top:auto; text-align:center; font-size:12px; color:var(--text-muted); opacity:.7; }
 
 /* ── Sign-in pages (Figma 12–15) ── */
 .auth{
@@ -104,8 +77,3 @@ body{
 .note{ display:flex; align-items:center; justify-content:center; gap:8px; margin:0; font-size:13px; color:var(--text-muted); }
 .note svg{ width:16px; height:16px; }
 .tip{ margin:0; padding:12px 14px; border-radius:12px; background:var(--subtle); font-size:13px; color:var(--text-muted); }
-
-/* ── Signed-in bar on the home page ── */
-.account{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.account p{ margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.account .btn{ width:auto; flex-shrink:0; white-space:nowrap; margin:0; padding:0 16px; min-height:36px; font-size:14px; }

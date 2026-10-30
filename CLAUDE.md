@@ -70,6 +70,20 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      Without `RESEND_API_KEY`, emails print in the terminal.
 3. **Core loop** — Add client + list, client detail + edit, Mark done → next step, Today,
    Close + Delete, Settings (follow-up defaults). Test: add 5 real clients.
+   - Wording decided 31 Oct 2026: **"Clients"** everywhere (not "Leads").
+   - Added an optional **Area** field (the Figma cards show "need · area");
+     `migrations/0002_area_outcome.sql` also adds `outcome` (won | lost | ended).
+   - API in `worker/api.js` (routes listed at its top). Next-step suggestions in
+     `src/flow.js`, from FigJam "3. Suggested next steps"; stages only move forward.
+   - Screens: `src/views/` today, clients, client, form (add/edit), settings; sheets and
+     the confirm dialog in `src/sheets.js`; router in `src/app.js` (History API paths
+     `/`, `/clients`, `/clients/new`, `/clients/:id`, `/clients/:id/edit`, `/settings`).
+   - Due values are local time (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`); stored timestamps
+     are UTC and shown with `localDay()`.
+   - Settings: follow-up rules, a test notification, account. The reminder switches,
+     editable stages and close reasons are not built (reminders come in Phase 4).
+   - Claude can't run remote D1 migrations (auto mode): Amin runs
+     `npx wrangler d1 migrations apply DB --remote` before code that needs them is pushed.
 4. **Reminders** — notification when a step is due, 8:00 am morning summary.
 5. **Mac view** — sidebar layout, all-clients table.
 6. **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +

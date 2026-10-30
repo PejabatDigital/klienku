@@ -4,7 +4,9 @@
    GET  /api/health      is the database reachable (no sign-in needed)
    GET  /api/setup       can an account be created right now ({open})
    GET  /api/push/key    the public key browsers need to subscribe to notifications
-   POST /api/push/test   remember this device and send it a test notification (signed in) */
+   POST /api/push/test   remember this device and send it a test notification (signed in)
+   /api/clients…, /api/settings   see worker/api.js */
+import { handleApi } from "./api.js";
 import { getAuth, getUserId, signupOpen } from "./auth.js";
 import { isPushService, sendPush } from "./push.js";
 
@@ -27,6 +29,10 @@ export default {
         const user = await getUserId(request, env);
         if (!user) return json({ error: "Sign in required" }, 401);
         return pushTest(request, env, ctx, user);
+      }
+      if (/^\/api\/(clients|settings)(\/|$)/.test(url.pathname)){
+        const res = await handleApi(request, env, await getUserId(request, env));
+        if (res) return res;
       }
       if (url.pathname==="/api" || url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
     } catch(e){

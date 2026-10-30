@@ -23,10 +23,10 @@ self.addEventListener("fetch", e=>{
   if (req.method!=="GET" || url.origin!==location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // API calls always go to the network
   if (req.mode==="navigate"){
-    // the app itself opens from cache; other pages (e.g. /signin) try the network first
-    e.respondWith(url.pathname==="/"
+    // the app's screens (/, /clients/…, /settings) open from cache; /signin tries the network first
+    e.respondWith(url.pathname!=="/signin"
       ? caches.match("/", {cacheName:CACHE}).then(r=>r || fetch(req))
-      : fetch(req).catch(()=>caches.match(url.pathname==="/signin" ? "/signin.html" : "/", {cacheName:CACHE})));
+      : fetch(req).catch(()=>caches.match("/signin.html", {cacheName:CACHE})));
     return;
   }
   e.respondWith(caches.match(req, {cacheName:CACHE}).then(r=>r || fetch(req)));

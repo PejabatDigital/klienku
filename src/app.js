@@ -1,64 +1,73 @@
-/* Home page (until Phase 3 brings Today): who's signed in, and a notification check for
-   this device. Signed out → /signin. */
-import { registerSW, isIOS } from "./pwa.js";
-import { pushState, sendTest } from "./push.js";
-import { currentUser, signOut } from "./account.js";
+/* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
+   /  Today · /clients  list · /clients/new  add · /clients/:id  detail ·
+   /clients/:id/edit  edit · /settings */
+import { registerSW } from "./pwa.js";
+import { currentUser } from "./account.js";
+import { closeSheet } from "./sheets.js";
+import { today } from "./views/today.js";
+import { clientsView } from "./views/clients.js";
+import { clientView } from "./views/client.js";
+import { addView, editView } from "./views/form.js";
+import { settingsView } from "./views/settings.js";
 
-const box = document.getElementById("notify");
-const status = document.getElementById("status");
-const say = (text, kind = "") => { status.textContent = text; status.className = "status " + kind; };
+const view = document.getElementById("view");
+const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab");
 
-const views = {
-  install: () => `
-    <p>On iPhone, notifications only work once KlienKu is on your Home Screen.</p>
-    <ol class="steps">
-      <li>Tap the <b>Share</b> button in Safari.</li>
-      <li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-      <li>Open KlienKu from your Home Screen and come back here.</li>
-    </ol>`,
-  unsupported: () => `
-    <p>This browser can't show notifications. ${isIOS() ? "Use Safari and add KlienKu to your Home Screen." : "Try Safari, Chrome or Edge."}</p>`,
-  blocked: () => `
-    <p>Notifications are turned off for KlienKu.</p>
-    <p class="muted">${isIOS() ? "Turn them on in iPhone Settings → Notifications → KlienKu, then reopen the app." : "Allow notifications for this site in your browser settings, then reload."}</p>`,
-  ready: () => `
-    <p>Tap a button. The first time, allow notifications when asked.</p>
-    <button class="btn btn-primary" data-delay="0">Send a test now</button>
-    <button class="btn btn-secondary" data-delay="10">Send in 10 seconds</button>
-    <p class="muted" style="margin:12px 0 0">Use "10 seconds", then close the app or lock your phone, to check it arrives like a real reminder.</p>`
-};
+const ROUTES = [
+  [/^\/$/, today, { tabs: true, fab: true }],
+  [/^\/clients$/, clientsView, { tabs: true, fab: true }],
+  [/^\/clients\/new$/, addView, {}],
+  [/^\/clients\/([\w-]+)\/edit$/, editView, {}],
+  [/^\/clients\/([\w-]+)$/, clientView, {}],
+  [/^\/settings$/, settingsView, { tabs: true }],
+];
+
+let depth = 0; // how many in-app pages are behind this one, so Back can use history
+
+/* Go to an in-app path. `replace` swaps the current page instead of adding one. */
+function go(path, { replace = false } = {}){
+  const state = { depth: replace ? depth : depth + 1, from: location.pathname };
+  if (replace) history.replaceState(state, "", path); else history.pushState(state, "", path);
+  depth = state.depth;
+  render();
+}
+/* Back to the previous in-app page, or to `fallback` when opened directly. */
+function back(fallback){
+  if (depth > 0) history.back(); else go(fallback, { replace: true });
+}
 
 function render(){
-  const state = pushState();
-  box.innerHTML = views[state]();
-  box.querySelectorAll("[data-delay]").forEach(b=>b.addEventListener("click", ()=>test(Number(b.dataset.delay))));
+  closeSheet();
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
+  if (!hit) return go("/", { replace: true });
+  tabbar.hidden = !hit.opts.tabs;
+  fab.hidden = !hit.opts.fab;
+  document.body.classList.toggle("has-tabs", !!hit.opts.tabs);
+  tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===path));
+  view.scrollTop = 0; window.scrollTo(0, 0);
+  hit.fn(view, { id: hit.m[1] }, { go, back });
 }
 
-async function test(delay){
-  const buttons = box.querySelectorAll("button");
-  buttons.forEach(b=>b.disabled = true);
-  say("Sending…");
-  try {
-    await sendTest(delay);
-    say(delay ? `On its way in ${delay} seconds. Close the app or lock your phone now.` : "Sent. It should appear in a moment.", "ok");
-  } catch(e){
-    if (e.message==="blocked") return render();
-    say(e.message==="dismissed" ? "Notifications weren't allowed. Tap again and choose Allow." : "Couldn't send: " + e.message, "err");
-  } finally {
-    buttons.forEach(b=>b.disabled = false);
-  }
-}
+document.addEventListener("click", e=>{
+  const a = e.target.closest("a[data-link]");
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  const path = new URL(a.href).pathname;
+  if (path===location.pathname && a.closest(".tabbar")) return render();
+  go(path);
+});
+window.addEventListener("popstate", e=>{ depth = (e.state && e.state.depth) || 0; render(); });
+// coming back to the app later: refresh what's due
+document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState==="visible" && (location.pathname==="/" || location.pathname==="/clients") && !document.querySelector(".layer")) render();
+});
 
 async function start(){
   registerSW();
   const user = await currentUser();
   if (!user) return location.replace("/signin");
-  document.getElementById("who").textContent = user.email;
-  document.getElementById("account").hidden = false;
-  document.getElementById("signOut").addEventListener("click", async ()=>{
-    try { await signOut(); location.replace("/signin"); }
-    catch(e){ say("Couldn't sign out. Check your connection and try again.", "err"); }
-  });
+  depth = (history.state && history.state.depth) || 0;
   render();
 }
 start();
