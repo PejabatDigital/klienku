@@ -11,6 +11,10 @@
     { "pattern": "klienku.kasahkod.cc", "custom_domain": true }
   ],
 
+  // `wrangler deploy` (and `wrangler dev`) builds the app first, so Workers Builds needs
+  // no separate build command.
+  "build": { "command": "npm run build" },
+
   // The built app (npm run build → dist/). Only /api/* runs Worker code; everything else
   // is served straight from assets, and unknown paths fall back to index.html.
   "assets": {
