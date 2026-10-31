@@ -10,16 +10,28 @@
    POST   /api/clients/:id/close       won | lost | ended, with a reason and note
    POST   /api/clients/:id/reopen      back to open with a new next step
    DELETE /api/clients/:id             remove for good (duplicates and mistakes)
-   GET    /api/settings, PUT /api/settings   follow-up rules */
+   GET    /api/settings, PUT /api/settings   follow-up rules and reminders */
 
 export const STAGES = ["new", "contacting", "site_visit", "quote_sent", "negotiating"];
 const OUTCOMES = ["won", "lost", "ended"];
+/* Settings: [check, default]. A check returns the cleaned value or refuses it. */
+const int = (min, max) => (v, k) => Number.isInteger(Number(v)) && v >= min && v <= max ? Number(v) : bad(`${k} must be a whole number from ${min} to ${max}`);
+const oneOf = (...ok) => (v, k) => ok.includes(Number(v)) ? Number(v) : bad(`${k} must be one of ${ok.join(", ")}`);
+const flag = (v, k) => typeof v==="boolean" || v===0 || v===1 ? (v ? 1 : 0) : bad(`${k} must be on or off`);
+const hhmm = (v, k) => typeof v==="string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : bad(`${k} must be HH:MM`);
+const zone = (v, k) => { try { new Intl.DateTimeFormat("en", { timeZone: v }); return v; } catch(e){ return bad(`${k} is not a time zone`); } };
 const SETTINGS = {
-  follow_up_days: [1, 30, 2],
-  max_tries: [1, 10, 3],
-  quote_after_visit_days: [1, 30, 2],
-  quote_follow_up_days: [1, 30, 3],
+  follow_up_days: [int(1, 30), 2],
+  max_tries: [int(1, 10), 3],
+  quote_after_visit_days: [int(1, 30), 2],
+  quote_follow_up_days: [int(1, 30), 3],
+  notify_due: [flag, 1],
+  remind_before: [oneOf(0, 5, 10, 15, 30, 60), 15],
+  morning_summary: [flag, 1],
+  summary_time: [hhmm, "08:00"],
+  timezone: [zone, "Asia/Kuala_Lumpur"],
 };
+const KEYS = Object.keys(SETTINGS);
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
@@ -65,12 +77,13 @@ const log = (db, user, cid, kind, txt, at = now()) =>
   db.prepare("INSERT INTO activity (id, user_id, client_id, kind, text, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
     .bind(id(), user, cid, kind, txt, at);
 
-async function settings(db, user){
-  const row = await db.prepare("SELECT * FROM settings WHERE user_id = ?1").bind(user).first();
+/* A settings row (or none) with defaults filled in. */
+export function withDefaults(row){
   const out = {};
-  for (const [k, [, , def]] of Object.entries(SETTINGS)) out[k] = row ? row[k] : def;
+  for (const [k, [, def]] of Object.entries(SETTINGS)) out[k] = row && row[k]!=null ? row[k] : def;
   return out;
 }
+const settings = async (db, user) => withDefaults(await db.prepare("SELECT * FROM settings WHERE user_id = ?1").bind(user).first());
 
 /* ── Routes ── */
 const routes = [
@@ -198,17 +211,11 @@ const routes = [
 
   ["PUT", /^\/api\/settings$/, async ({ db, user, request }) => {
     const b = await body(request), cur = await settings(db, user);
-    for (const [k, [min, max]] of Object.entries(SETTINGS)){
-      if (!(k in b)) continue;
-      const n = Number(b[k]);
-      if (!Number.isInteger(n) || n < min || n > max) bad(`${k} must be a whole number from ${min} to ${max}`);
-      cur[k] = n;
-    }
-    await db.prepare(`INSERT INTO settings (user_id, follow_up_days, max_tries, quote_after_visit_days, quote_follow_up_days, updated_at)
-                      VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                      ON CONFLICT (user_id) DO UPDATE SET follow_up_days = ?2, max_tries = ?3, quote_after_visit_days = ?4,
-                      quote_follow_up_days = ?5, updated_at = ?6`)
-      .bind(user, cur.follow_up_days, cur.max_tries, cur.quote_after_visit_days, cur.quote_follow_up_days, now()).run();
+    for (const [k, [check]] of Object.entries(SETTINGS)) if (k in b) cur[k] = check(b[k], k);
+    // KEYS are fixed names from SETTINGS above, never from the request
+    await db.prepare(`INSERT INTO settings (user_id, ${KEYS.join(", ")}, updated_at) VALUES (?1, ${KEYS.map((_, i)=>"?" + (i + 2)).join(", ")}, ?${KEYS.length + 2})
+                      ON CONFLICT (user_id) DO UPDATE SET ${KEYS.map((k, i)=>`${k} = ?${i + 2}`).join(", ")}, updated_at = ?${KEYS.length + 2}`)
+      .bind(user, ...KEYS.map(k=>cur[k]), now()).run();
     return json({ settings: cur });
   }],
 ];

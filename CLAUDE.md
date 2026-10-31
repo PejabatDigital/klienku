@@ -86,6 +86,21 @@ to use later: not tied to any industry or company. A Kasah Kod app.
    - Claude can't run remote D1 migrations (auto mode): Amin runs
      `npx wrangler d1 migrations apply DB --remote` before code that needs them is pushed.
 4. **Reminders** — notification when a step is due, 8:00 am morning summary.
+   - Cron Trigger every 5 min (`wrangler.jsonc` `triggers`) → `worker/reminders.js`.
+     `plan()` decides what to send (pure): steps with a time → `remind_before` minutes
+     before (0/5/10/15/30/60, default 15), skipped if over an hour late; morning summary at
+     `summary_time` (sent within 3 h, once a day via `settings.last_summary`, skipped when
+     nothing is overdue/due); date-only steps get their own reminder at summary time only
+     when the summary is off. Each step is reminded once (`clients.notified_due`).
+   - Worked out in `settings.timezone`, updated from the device whenever Settings opens.
+   - Devices: `POST/DELETE /api/push/subscribe`; the app re-sends its subscription on open
+     (`refreshDevice`); 404/410 from a push service removes the device; signing out
+     removes this device.
+   - Settings has a Reminders section (this device, due-step switch, remind me, summary
+     switch + time, test). First-time setup (`src/views/setup.js`, Figma 17) shows once
+     per device until reminders are on there; Face ID left out (60-day sessions).
+   - `migrations/0003_reminders.sql`. Local: `npx wrangler dev … --test-scheduled`, then
+     POST `/cdn-cgi/local/explorer/api/local/scheduled?worker=klienku` with `{"cron":"*/5 * * * *"}`.
 5. **Mac view** — sidebar layout, all-clients table.
 6. **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +
    Privacy, backups, security check.

@@ -6,6 +6,9 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-10-12",
 
+  // Reminders: every 5 minutes, send what's due (worker/reminders.js).
+  "triggers": { "crons": ["*/5 * * * *"] },
+
   // klienku.kasahkod.cc is created and pointed here on deploy (kasahkod.cc is on this account).
   "routes": [
     { "pattern": "klienku.kasahkod.cc", "custom_domain": true }

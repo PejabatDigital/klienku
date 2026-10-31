@@ -1,14 +1,18 @@
 /* KlienKu Worker: /api/auth/* is sign-in, the rest of /api/* is the API; everything else
    is the built app in dist/ (wrangler.jsonc routes only /api/* through this code).
+   The Cron Trigger runs `scheduled` every 5 minutes to send reminders (worker/reminders.js).
 
-   GET  /api/health      is the database reachable (no sign-in needed)
-   GET  /api/setup       can an account be created right now ({open})
-   GET  /api/push/key    the public key browsers need to subscribe to notifications
-   POST /api/push/test   remember this device and send it a test notification (signed in)
+   GET    /api/health          is the database reachable (no sign-in needed)
+   GET    /api/setup           can an account be created right now ({open})
+   GET    /api/push/key        the public key browsers need to subscribe to notifications
+   POST   /api/push/subscribe  remember this device for reminders (signed in)
+   DELETE /api/push/subscribe  forget this device ({endpoint}) (signed in)
+   POST   /api/push/test       remember this device and send it a test notification (signed in)
    /api/clients…, /api/settings   see worker/api.js */
 import { handleApi } from "./api.js";
 import { getAuth, getUserId, signupOpen } from "./auth.js";
 import { isPushService, sendPush } from "./push.js";
+import { runReminders } from "./reminders.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
@@ -25,10 +29,12 @@ export default {
       }
       if (url.pathname==="/api/setup") return json({ open: await signupOpen(env) });
       if (url.pathname==="/api/push/key") return json({ key: env.VAPID_PUBLIC_KEY });
-      if (url.pathname==="/api/push/test" && request.method==="POST"){
+      if (url.pathname==="/api/push/subscribe" || url.pathname==="/api/push/test"){
         const user = await getUserId(request, env);
         if (!user) return json({ error: "Sign in required" }, 401);
-        return pushTest(request, env, ctx, user);
+        if (url.pathname==="/api/push/test" && request.method==="POST") return pushTest(request, env, ctx, user);
+        if (request.method==="POST") return subscribe(request, env, user);
+        if (request.method==="DELETE") return unsubscribe(request, env, user);
       }
       if (/^\/api\/(clients|settings)(\/|$)/.test(url.pathname)){
         const res = await handleApi(request, env, await getUserId(request, env));
@@ -40,22 +46,47 @@ export default {
       return json({ error: "Something went wrong" }, 500);
     }
     return env.ASSETS.fetch(request);
+  },
+
+  async scheduled(event, env, ctx){
+    ctx.waitUntil(runReminders(env));
   }
 };
 
-/* Saves the device's push subscription for the signed-in user, then sends one notification,
-   now or after a short wait (so the phone can be locked first). */
-async function pushTest(request, env, ctx, user){
+/* Reads {subscription} from the body; null when it isn't a real push subscription. */
+async function readSubscription(request){
+  let body;
+  try { body = await request.json(); } catch(e){ return {}; }
+  const sub = body && body.subscription;
+  const ok = sub && isPushService(sub.endpoint) && sub.keys && typeof sub.keys.p256dh==="string" && typeof sub.keys.auth==="string";
+  return { body, sub: ok ? sub : null };
+}
+const save = (env, user, sub) => env.DB.prepare(
+  `INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth, created_at) VALUES (?1, ?2, ?3, ?4, ?5)
+   ON CONFLICT (endpoint) DO UPDATE SET user_id = ?2, p256dh = ?3, auth = ?4`
+).bind(sub.endpoint, user, sub.keys.p256dh, sub.keys.auth, new Date().toISOString()).run();
+
+async function subscribe(request, env, user){
+  const { sub } = await readSubscription(request);
+  if (!sub) return json({ error: "Not a push subscription" }, 400);
+  await save(env, user, sub);
+  return json({ ok: true });
+}
+
+async function unsubscribe(request, env, user){
   let body;
   try { body = await request.json(); } catch(e){ return json({ error: "Bad request" }, 400); }
-  const sub = body && body.subscription;
-  if (!sub || !isPushService(sub.endpoint) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth){
-    return json({ error: "Not a push subscription" }, 400);
-  }
-  await env.DB.prepare(
-    `INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth, created_at) VALUES (?1, ?2, ?3, ?4, ?5)
-     ON CONFLICT (endpoint) DO UPDATE SET user_id = ?2, p256dh = ?3, auth = ?4`
-  ).bind(sub.endpoint, user, sub.keys.p256dh, sub.keys.auth, new Date().toISOString()).run();
+  if (!body || typeof body.endpoint!=="string") return json({ error: "endpoint is required" }, 400);
+  await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1 AND user_id = ?2").bind(body.endpoint, user).run();
+  return json({ ok: true });
+}
+
+/* Saves the device, then sends one notification, now or after a short wait (so the phone
+   can be locked first). */
+async function pushTest(request, env, ctx, user){
+  const { body, sub } = await readSubscription(request);
+  if (!sub) return json({ error: "Not a push subscription" }, 400);
+  await save(env, user, sub);
 
   const delay = Math.min(Math.max(Number(body.delay) || 0, 0), 20);
   const message = {

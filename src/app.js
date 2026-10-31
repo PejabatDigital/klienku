@@ -2,6 +2,8 @@
    /  Today · /clients  list · /clients/new  add · /clients/:id  detail ·
    /clients/:id/edit  edit · /settings */
 import { registerSW } from "./pwa.js";
+import { refreshDevice } from "./push.js";
+import { maybeShowSetup } from "./views/setup.js";
 import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
 import { today } from "./views/today.js";
@@ -69,5 +71,7 @@ async function start(){
   if (!user) return location.replace("/signin");
   depth = (history.state && history.state.depth) || 0;
   render();
+  refreshDevice();
+  maybeShowSetup();
 }
 start();

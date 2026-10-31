@@ -251,3 +251,28 @@ div.srow{ cursor:default; }
 body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) + 88px); }
 .toast.err{ background:var(--overdue); }
 .toast.out{ opacity:0; }
+
+/* ── Switches and two-line rows (Settings, setup) ── */
+.srow small{ display:block; margin-top:2px; font-size:13px; line-height:18px; color:var(--text-muted); }
+.srow:has(small){ padding-top:10px; padding-bottom:10px; }
+.switch{ appearance:none; -webkit-appearance:none; flex:none; position:relative; width:51px; height:31px; margin:0; border-radius:999px; background:#E2DFD9; cursor:pointer; transition:background .2s; }
+.switch::after{ content:""; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.18); transition:transform .2s; }
+.switch:checked{ background:var(--accent); }
+.switch:checked::after{ transform:translateX(20px); }
+
+/* ── First-time setup (Figma 17) ── */
+.setup{ position:fixed; inset:0; z-index:40; background:var(--bg); overflow-y:auto; }
+.setup-in{ max-width:480px; min-height:100%; margin:0 auto; display:flex; flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 56px) 24px calc(env(safe-area-inset-bottom) + 24px); }
+.setup .tag{ align-self:flex-start; font-size:13px; padding:4px 10px; }
+.setup h1{ margin:16px 0 8px; font-size:28px; line-height:34px; font-weight:700; letter-spacing:-.02em; }
+.setup .lead{ margin:0 0 20px; color:var(--text-muted); }
+.setup .srow{ gap:12px; padding:12px 14px; cursor:default; }
+.setup label.srow{ cursor:pointer; }
+.setup .srow > span b{ display:block; font-weight:600; }
+.ico{ flex:none; width:40px; height:40px; border-radius:10px; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; }
+.ico .ic{ width:22px; height:22px; }
+.allow{ flex:none; border:0; border-radius:999px; background:var(--accent); color:#fff; font:600 15px/20px var(--font); padding:7px 16px; cursor:pointer; }
+.allow.on{ background:var(--won-soft); color:var(--won); }
+.setup .btn-lg{ margin-top:auto; }
+.setup .group + .btn-lg{ margin-top:auto; }
