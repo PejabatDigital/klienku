@@ -116,8 +116,9 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      `last_contact` (latest done / no reply / note).
    - Client page on wide: WhatsApp / Call / Edit top right, next step above stage.
      "Close this client" link at the bottom (phone and Mac). Sheets are centred dialogs.
-6. **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +
+6. ✅ **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +
    Privacy, backups, security check.
+   Confirmed by Amin 31 Oct 2026: all working well on his iPhone.
    - Screens: offline note at the top (`#offlineBar`, lists keep showing what's saved on
      the device); "Couldn't load / You're offline" with Try again (`problem()` in
      `src/ui.js`); "Client not found" (`gone()`); "Page not found" for unknown paths.
