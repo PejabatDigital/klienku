@@ -68,8 +68,9 @@ to use later: not tied to any industry or company. A Kasah Kod app.
    - Local: `npm run dev:api` (`--local-upstream localhost:8787`, because the custom
      domain route otherwise makes requests look like they come from klienku.kasahkod.cc).
      Without `RESEND_API_KEY`, emails print in the terminal.
-3. **Core loop** — Add client + list, client detail + edit, Mark done → next step, Today,
+3. ✅ **Core loop** — Add client + list, client detail + edit, Mark done → next step, Today,
    Close + Delete, Settings (follow-up defaults). Test: add 5 real clients.
+   Confirmed by Amin 31 Oct 2026: all working well with real clients.
    - Wording decided 31 Oct 2026: **"Clients"** everywhere (not "Leads").
    - Added an optional **Area** field (the Figma cards show "need · area");
      `migrations/0002_area_outcome.sql` also adds `outcome` (won | lost | ended).
