@@ -1,8 +1,10 @@
-/* Bottom sheets (next follow-up, mark as Lost) and the confirm dialog (Figma 11 Delete). */
-import { addDays, timeOf } from "./dates.js";
+/* Bottom sheets (log interaction, next follow-up, mark as Lost) and the confirm dialog
+   (Figma 11 Delete). */
+import { addDays, dueShort, status, timeOf, ymd } from "./dates.js";
 import { api, updateClient } from "./api.js";
-import { LOST_REASONS } from "./lists.js";
-import { esc, toast } from "./ui.js";
+import { statusLabel } from "./flow.js";
+import { CLOSED, INTERACTION_TYPES, LOST_REASONS, STATUSES } from "./lists.js";
+import { esc, icon, pills, toast, wirePills } from "./ui.js";
 
 /* Opens a sheet with `html`; returns its panel. Tapping outside or [data-close] closes it. */
 export function openSheet(html, cls = ""){
@@ -85,6 +87,63 @@ export function followUpSheet(lead, onSaved){
   });
   const remove = sheet.querySelector('[data-act="remove"]');
   if (remove) remove.addEventListener("click", e=>send(e.target, { next_due: null }, "Follow-up removed"));
+}
+
+/* ── Log interaction: what happened and when, then the status and the next follow-up,
+   saved together. A follow-up still to come is kept unless another is chosen; one that
+   is due or overdue counts as done, so with no new date the lead has no follow-up. ── */
+export function logSheet(lead, onSaved){
+  const d = new Date(), now = `${ymd(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const keep = lead.next_due && status(lead.next_due)==="upcoming";
+  const options = [...(keep ? [{ label: "Keep · " + dueShort(lead.next_due), due: lead.next_due }] : []), ...FOLLOW_UP_DAYS()];
+  const sheet = openSheet(`
+    <h2>Log interaction</h2>
+    <p class="sub">${esc(lead.name)}</p>
+    <p class="label">What happened?</p>
+    ${pills("type", INTERACTION_TYPES, "WhatsApp")}
+    <textarea class="note" name="text" rows="3" maxlength="5000" placeholder="e.g. Asked for a rough price. Will send photos of the bathroom."></textarea>
+    <label class="row-input"><span>When</span><input type="datetime-local" name="at" value="${now}" max="${now}"></label>
+    <label class="row-select">
+      <span>Status</span>
+      <select name="stage">${STATUSES.map(s=>`<option value="${s.key}"${s.key===lead.stage ? " selected" : ""}>${s.label}</option>`).join("")}</select>
+      <b class="val">${esc(statusLabel(lead.stage))}</b>${icon("chevron")}
+    </label>
+    <input class="note" name="reason" list="lost-reasons" placeholder="Why was it lost? (optional)" maxlength="200" hidden>
+    <datalist id="lost-reasons">${LOST_REASONS.map(r=>`<option value="${esc(r)}">`).join("")}</datalist>
+    <div data-follow>
+      <p class="label">Next follow-up</p>
+      <div data-when>${whenChips(options, keep ? 0 : null)}</div>
+      <input class="note" name="step" value="${keep ? esc(lead.next_step) : ""}" placeholder="What to do (optional)" maxlength="200">
+      <p class="hint">No date chosen means no follow-up is scheduled.</p>
+    </div>
+    <button class="btn btn-primary btn-lg" data-act="save">Save</button>
+    <button type="button" class="link center" data-close>Cancel</button>`, "log");
+  const pick = wirePills(sheet), getDue = wireWhen(sheet.querySelector("[data-when]"));
+  const sel = sheet.querySelector("[name=stage]"), reason = sheet.querySelector("[name=reason]"), follow = sheet.querySelector("[data-follow]");
+  const step = sheet.querySelector("[name=step]");
+  sel.addEventListener("change", ()=>{
+    sheet.querySelector(".row-select .val").textContent = statusLabel(sel.value);
+    reason.hidden = sel.value!=="lost";
+    follow.hidden = CLOSED.includes(sel.value);
+  });
+  // a new date gets its own note; the kept one keeps its note
+  sheet.querySelector("[data-when]").addEventListener("click", e=>{
+    const b = e.target.closest("[data-due]");
+    if (b && keep && [lead.next_step || "", ""].includes(step.value)) step.value = b.dataset.due===lead.next_due && b.classList.contains("on") ? (lead.next_step || "") : "";
+  });
+  sheet.querySelector('[data-act="save"]').addEventListener("click", async e=>{
+    const type = pick("type"), at = sheet.querySelector("[name=at]").value;
+    if (!type) return toast("Please choose what happened.", true);
+    if (!at) return toast("Please choose when it happened.", true);
+    const body = { type, text: sheet.querySelector("[name=text]").value, at: new Date(at).toISOString(), stage: sel.value };
+    if (sel.value==="lost") body.reason = reason.value;
+    if (!CLOSED.includes(sel.value)) Object.assign(body, { next_due: getDue(), next_step: step.value });
+    e.target.disabled = true;
+    try {
+      const { client } = await api(`/clients/${lead.id}/interactions`, { method: "POST", body });
+      updateClient(client); closeSheet(); toast("Logged"); onSaved(client);
+    } catch(err){ toast(err.message, true); e.target.disabled = false; }
+  });
 }
 
 /* ── Mark as Lost, with an optional reason ── */

@@ -4,20 +4,7 @@
 import { api, updateClient } from "../api.js";
 import { PROJECT_TYPES, SOURCES } from "../lists.js";
 import { FOLLOW_UP_DAYS, confirmDialog, whenChips, wireWhen } from "../sheets.js";
-import { esc, gone, problem, toast } from "../ui.js";
-
-/* Pills where one (or none) can be chosen; tapping the chosen one again unchooses it. */
-const pills = (name, list, value) => `<div class="chips pick-one" data-pills="${name}">${list.map(v=>
-  `<button type="button" class="pill${v===value ? " on" : ""}" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
-function wirePills(root){
-  root.querySelectorAll("[data-pills]").forEach(group=>group.addEventListener("click", e=>{
-    const b = e.target.closest("[data-v]");
-    if (!b) return;
-    const on = !b.classList.contains("on");
-    group.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on", on && x===b));
-  }));
-  return name => { const on = root.querySelector(`[data-pills="${name}"] .on`); return on ? on.dataset.v : ""; };
-}
+import { esc, gone, pills, problem, toast, wirePills } from "../ui.js";
 
 /* "15,000", "RM 15k" → 15000; empty → null; anything else → NaN. */
 function ringgit(v){

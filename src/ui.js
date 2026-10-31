@@ -46,6 +46,19 @@ export function card(c){
   </a>`;
 }
 
+/* Pills where one (or none) can be chosen; tapping the chosen one again unchooses it. */
+export const pills = (name, list, value) => `<div class="chips pick-one" data-pills="${name}">${list.map(v=>
+  `<button type="button" class="pill${v===value ? " on" : ""}" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
+export function wirePills(root){
+  root.querySelectorAll("[data-pills]").forEach(group=>group.addEventListener("click", e=>{
+    const b = e.target.closest("[data-v]");
+    if (!b) return;
+    const on = !b.classList.contains("on");
+    group.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on", on && x===b));
+  }));
+  return name => { const on = root.querySelector(`[data-pills="${name}"] .on`); return on ? on.dataset.v : ""; };
+}
+
 /* When a screen can't load: offline, or something went wrong, with Try again. */
 export function problem(root, e, retry){
   root.innerHTML = `<div class="empty small">${icon(e.offline ? "offline" : "alert")}

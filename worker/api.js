@@ -6,14 +6,14 @@
    GET    /api/clients                 every lead (active, won and lost) with last_contact, small enough to send whole
    POST   /api/clients                 add a lead (the follow-up is optional)
    GET    /api/clients/:id             one lead and its activity, newest first
-   PATCH  /api/clients/:id             edit details, change status ({status, reason}), set or clear the follow-up ({next_due, next_step})
-   POST   /api/clients/:id/notes       add a note to the history
+   PATCH  /api/clients/:id             edit details, change status ({stage, reason}), set or clear the follow-up ({next_due, next_step})
+   POST   /api/clients/:id/interactions  log what happened ({type, text, at}), with the same status / follow-up changes as PATCH
    DELETE /api/clients/:id             remove for good (duplicates and mistakes)
-   GET    /api/settings, PUT /api/settings   follow-up rules and reminders
-   GET    /api/export                  every client and its history as a spreadsheet file (CSV)
+   GET    /api/settings, PUT /api/settings   reminders
+   GET    /api/export                  every lead and its history as a spreadsheet file (CSV)
    DELETE /api/account                 delete the signed-in user and everything they own */
 
-import { CLOSED, PROJECT_TYPES, SOURCES, STATUSES } from "../src/lists.js";
+import { CLOSED, CONTACT_KINDS, INTERACTION_TYPES, PROJECT_TYPES, SOURCES, STATUSES } from "../src/lists.js";
 
 const STATUS_KEYS = STATUSES.map(s=>s.key), statusName = key => (STATUSES.find(s=>s.key===key) || {}).label || key;
 /* Settings: [check, default]. A check returns the cleaned value or refuses it. */
@@ -55,6 +55,14 @@ const due = v => {
 const status = v => STATUS_KEYS.includes(v) ? v : bad("unknown status");
 const choice = (list, name) => v => { v = text(v, 60, name); return !v || list.includes(v) ? v : bad("unknown " + name); };
 const projectType = choice(PROJECT_TYPES, "project type"), source = choice(SOURCES, "lead source");
+const interactionType = v => INTERACTION_TYPES.includes(v) ? v : bad("unknown interaction type");
+/* When an interaction happened: an ISO time, not in the future (a few minutes' leeway). */
+const when = v => {
+  const t = typeof v==="string" ? Date.parse(v) : NaN;
+  if (Number.isNaN(t) || t < Date.UTC(2020, 0, 1)) bad("at must be a date and time");
+  if (t > Date.now() + 5 * 60_000) bad("An interaction can't be in the future");
+  return new Date(t).toISOString();
+};
 /* Estimated budget in whole ringgit, or null when not given. */
 const budget = v => {
   if (v==null || v==="") return null;
@@ -122,8 +130,9 @@ const cell = v => {
 function csv(clients, activity, timeZone){
   const ymd = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
   const day = iso => iso ? ymd.format(new Date(iso)) : "";
+  const hm = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const history = {};
-  for (const a of activity) (history[a.client_id] ||= []).push(`${day(a.at)}  ${a.text.replace(/\n/g, " — ")}`);
+  for (const a of activity) (history[a.client_id] ||= []).push(`${day(a.at)} ${hm.format(new Date(a.at))}  ${a.text.replace(/\n/g, " — ")}`);
   const rows = [["Name", "Phone", "Location", "Project type", "Lead source", "Estimated budget (RM)", "Status", "Lost reason",
     "Next follow-up", "Follow-up note", "Added", "Closed", "Last contacted", "General notes", "History"]];
   for (const c of clients) rows.push([c.name, c.phone, c.area, c.project_type, c.source, c.budget ?? "", statusName(c.stage),
@@ -132,11 +141,42 @@ function csv(clients, activity, timeZone){
   return "\uFEFF" + rows.map(r=>r.map(cell).join(",")).join("\r\n") + "\r\n";
 }
 
+/* When they were last in touch (CONTACT_KINDS are fixed names from src/lists.js). */
+const LAST_CONTACT = `(SELECT MAX(a.at) FROM activity a WHERE a.client_id = c.id AND a.kind IN (${CONTACT_KINDS.map(k=>`'${k}'`).join(", ")})) AS last_contact`;
+
+/* Status and follow-up changes asked for in `b` ({stage, reason}, {next_due, next_step}),
+   applied to `next` (the lead's new values); returns the history lines they add. */
+function progress(db, user, c, b, next, t){
+  const notes = [], cid = c.id;
+  Object.assign(next, { stage: c.stage, next_step: c.next_step, next_due: c.next_due, close_reason: c.close_reason, closed_at: c.closed_at });
+  if ("stage" in b && b.stage!==c.stage){
+    next.stage = status(b.stage);
+    const reason = text(b.reason, 200, "reason");
+    if (CLOSED.includes(next.stage)){
+      // Won and Lost have no follow-up
+      Object.assign(next, { next_step: null, next_due: null, closed_at: t, close_reason: next.stage==="lost" && reason ? reason : null });
+    } else Object.assign(next, { closed_at: null, close_reason: null });
+    notes.push(log(db, user, cid, "status", `Status: ${statusName(c.stage)} → ${statusName(next.stage)}` + (next.close_reason ? "\n" + next.close_reason : ""), t));
+  }
+  if ("next_due" in b){
+    if (CLOSED.includes(next.stage)) bad("Won and Lost leads have no follow-up");
+    const f = followUp(b);
+    if (f.next_due!==next.next_due || f.next_step!==next.next_step){
+      Object.assign(next, f);
+      notes.push(log(db, user, cid, "follow_up", f.next_due ? `Follow-up: ${dueText(f.next_due)}` + (f.next_step ? "\n" + f.next_step : "") : "Follow-up removed", t));
+    }
+  }
+  return notes;
+}
+const saveLead = (db, user, cid, next, t) => db.prepare(`UPDATE clients SET name = ?1, phone = ?2, area = ?3, project_type = ?4, source = ?5, budget = ?6, notes = ?7, stage = ?8,
+    next_step = ?9, next_due = ?10, close_reason = ?11, closed_at = ?12, updated_at = ?13 WHERE id = ?14 AND user_id = ?15`)
+  .bind(next.name, next.phone, next.area, next.project_type, next.source, next.budget, next.notes, next.stage,
+    next.next_step, next.next_due, next.close_reason, next.closed_at, t, cid, user);
+
 /* ── Routes ── */
 const routes = [
   ["GET", /^\/api\/clients$/, async ({ db, user }) => {
-    // last_contact: when something last happened with them (a step finished, or a note)
-    const { results } = await db.prepare(`SELECT c.*, (SELECT MAX(a.at) FROM activity a WHERE a.client_id = c.id AND a.kind IN ('done', 'no_reply', 'note')) AS last_contact
+    const { results } = await db.prepare(`SELECT c.*, ${LAST_CONTACT}
       FROM clients c WHERE c.user_id = ?1 ORDER BY c.next_due IS NULL, c.next_due, c.created_at`).bind(user).all();
     return json({ clients: results });
   }],
@@ -161,45 +201,17 @@ const routes = [
 
   ["PATCH", /^\/api\/clients\/([\w-]+)$/, async ({ db, user, request, params: [cid] }) => {
     const c = await getClient(db, user, cid), b = await body(request), t = now();
-    const next = { ...details(b, c), stage: c.stage, next_step: c.next_step, next_due: c.next_due, close_reason: c.close_reason, closed_at: c.closed_at };
-    const notes = [];
-
-    if ("stage" in b && b.stage!==c.stage){
-      next.stage = status(b.stage);
-      const reason = text(b.reason, 200, "reason");
-      if (CLOSED.includes(next.stage)){
-        // Won and Lost have no follow-up
-        Object.assign(next, { next_step: null, next_due: null, closed_at: t, close_reason: next.stage==="lost" && reason ? reason : null });
-      } else Object.assign(next, { closed_at: null, close_reason: null });
-      notes.push(log(db, user, cid, "status", `Status: ${statusName(c.stage)} → ${statusName(next.stage)}` + (next.close_reason ? "\n" + next.close_reason : ""), t));
-    }
-    if ("next_due" in b){
-      if (CLOSED.includes(next.stage)) bad("Won and Lost leads have no follow-up");
-      const f = followUp(b);
-      if (f.next_due!==next.next_due || f.next_step!==next.next_step){
-        Object.assign(next, f);
-        notes.push(log(db, user, cid, "follow_up", f.next_due ? `Follow-up: ${dueText(f.next_due)}` + (f.next_step ? "\n" + f.next_step : "") : "Follow-up removed", t));
-      }
-    }
-
-    await db.batch([
-      db.prepare(`UPDATE clients SET name = ?1, phone = ?2, area = ?3, project_type = ?4, source = ?5, budget = ?6, notes = ?7, stage = ?8,
-                  next_step = ?9, next_due = ?10, close_reason = ?11, closed_at = ?12, updated_at = ?13 WHERE id = ?14 AND user_id = ?15`)
-        .bind(next.name, next.phone, next.area, next.project_type, next.source, next.budget, next.notes, next.stage,
-          next.next_step, next.next_due, next.close_reason, next.closed_at, t, cid, user),
-      ...notes,
-    ]);
+    const next = details(b, c), notes = progress(db, user, c, b, next, t);
+    await db.batch([saveLead(db, user, cid, next, t), ...notes]);
     return json({ client: await getClient(db, user, cid) });
   }],
 
-  ["POST", /^\/api\/clients\/([\w-]+)\/notes$/, async ({ db, user, request, params: [cid] }) => {
-    await getClient(db, user, cid);
-    const b = await body(request), t = now();
-    await db.batch([
-      log(db, user, cid, "note", text(b.text, 5000, "note", true), t),
-      db.prepare("UPDATE clients SET updated_at = ?1 WHERE id = ?2 AND user_id = ?3").bind(t, cid, user),
-    ]);
-    return json({ ok: true }, 201);
+  ["POST", /^\/api\/clients\/([\w-]+)\/interactions$/, async ({ db, user, request, params: [cid] }) => {
+    const c = await getClient(db, user, cid), b = await body(request), t = now();
+    const type = interactionType(b.type), said = text(b.text, 5000, "description"), at = b.at ? when(b.at) : t;
+    const next = details({}, c), notes = progress(db, user, c, b, next, t);
+    await db.batch([log(db, user, cid, "interaction", said ? `${type}\n${said}` : type, at), saveLead(db, user, cid, next, t), ...notes]);
+    return json({ client: await getClient(db, user, cid) }, 201);
   }],
 
   ["DELETE", /^\/api\/clients\/([\w-]+)$/, async ({ db, user, params: [cid] }) => {
@@ -213,7 +225,7 @@ const routes = [
 
   ["GET", /^\/api\/export$/, async ({ db, user }) => {
     const [{ results: clients }, { results: activity }, s] = await Promise.all([
-      db.prepare(`SELECT c.*, (SELECT MAX(a.at) FROM activity a WHERE a.client_id = c.id AND a.kind IN ('done', 'no_reply', 'note')) AS last_contact
+      db.prepare(`SELECT c.*, ${LAST_CONTACT}
         FROM clients c WHERE c.user_id = ?1 ORDER BY c.name COLLATE NOCASE`).bind(user).all(),
       db.prepare("SELECT client_id, text, at FROM activity WHERE user_id = ?1 ORDER BY at, rowid").bind(user).all(),
       settings(db, user),

@@ -25,3 +25,10 @@ export const SOURCES = ["WhatsApp", "Facebook", "Instagram", "Google", "Website"
 /* Offered when a lead is marked Lost (the reason is optional). */
 export const LOST_REASONS = ["No reply", "Too expensive", "Went with someone else", "Project postponed",
   "Not a good fit", "Outside our area"];
+
+/* What can be logged as an interaction with a lead. */
+export const INTERACTION_TYPES = ["WhatsApp", "Call", "Meeting", "Site visit", "Customer request",
+  "Quotation sent", "Follow-up attempt", "Other"];
+/* History kinds that count as being in touch ("Last contacted"). Version 1 kept done,
+   no_reply and note; Version 2 logs interactions. */
+export const CONTACT_KINDS = ["interaction", "done", "no_reply", "note"];

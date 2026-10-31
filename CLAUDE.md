@@ -179,7 +179,7 @@ Decisions (Amin, 31 Oct 2026):
   team permissions, project management.
 
 Phases (one at a time, each confirmed by Amin):
-- **V2.1 Lead record** — built 31 Oct 2026, waiting for Amin to confirm.
+- ✅ **V2.1 Lead record** — confirmed by Amin 1 Nov 2026 (live).
   - Lists in `src/lists.js` (imported by the app and the Worker). `migrations/0005_leads.sql`
     adds `project_type`, `source`, `budget` and moves old data across. The table is still
     `clients` and the API still `/api/clients`; columns: `stage` = status, `area` =
@@ -195,7 +195,18 @@ Phases (one at a time, each confirmed by Amin):
     preselects WhatsApp as source, follow-up optional.
   - Today already lists "No follow-up scheduled" (between Today and Coming up) so undated
     leads aren't missed before V2.3. Colour for "no follow-up": `--none` #9A6F0A (mustard).
-- **V2.2 Log interaction + follow-up** — the one sheet that replaces Mark done.
+- **V2.2 Log interaction + follow-up** — built 1 Nov 2026, waiting for Amin to confirm.
+  - `POST /api/clients/:id/interactions` `{type, text, at, stage?, reason?, next_due?,
+    next_step?}`: one history row (kind `interaction`, text = type, then the description;
+    `at` may be earlier, not in the future), plus the same status / follow-up changes as
+    PATCH (shared `progress()` in `worker/api.js`). No migration. `/notes` is gone.
+  - Types in `src/lists.js` `INTERACTION_TYPES`; `CONTACT_KINDS` drives Last contacted.
+  - `logSheet()` in `src/sheets.js`: type pills (WhatsApp first), description, when (now,
+    editable), status, next follow-up. An upcoming follow-up shows as "Keep · <date>" and is
+    kept; a due/overdue one counts as done, so no new date = no follow-up.
+  - Lead page: Log interaction in the follow-up card (and Won/Lost card) and the History
+    heading; history shows date + time; interactions in accent, status/follow-up lines muted.
+    The download's history lines include the time.
 - **V2.3 Dashboard** — Today becomes the Dashboard: Active, Overdue, Due today, Upcoming,
   New this week; action list; No follow-up scheduled; leads by status (Mac).
 - **V2.4 All Leads** — Mac table with filters (status, project type, source, follow-up),

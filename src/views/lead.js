@@ -1,17 +1,16 @@
-/* Lead page: WhatsApp / Call, status (any order), next follow-up, details, general notes,
-   and the history. Won and Lost leads show how they ended; changing the status back
+/* Lead page: WhatsApp / Call, status (any order), next follow-up with Log interaction,
+   details, general notes, and the history. Won and Lost leads show how they ended; changing the status back
    makes them active again. */
 import { api, updateClient } from "../api.js";
-import { dayMonth, dueLong, localDay, status } from "../dates.js";
-import { STATUSES } from "../lists.js";
+import { clock, dayMonth, dueLong, localDay, status } from "../dates.js";
+import { CONTACT_KINDS, STATUSES } from "../lists.js";
 import { followUpText, isActive, money, statusLabel, whatsapp } from "../flow.js";
-import { followUpSheet, lostSheet } from "../sheets.js";
+import { followUpSheet, logSheet, lostSheet } from "../sheets.js";
 import { cardState, esc, gone, icon, isWide, problem, toast } from "../ui.js";
 
 const KIND = { created: "Added", note: "Note", done: "Done", no_reply: "No reply", moved: "Rescheduled",
-  closed: "Closed", reopened: "Reopened", stage: "Stage changed", edited: "Edited", status: "Status changed", follow_up: "Follow-up" };
-/* History kinds that count as being in touch with the lead (as GET /api/clients works it out). */
-const CONTACT = ["done", "no_reply", "note"];
+  closed: "Closed", reopened: "Reopened", stage: "Stage changed", edited: "Edited", status: "Status changed", follow_up: "Follow-up",
+  interaction: "Interaction" };
 
 const statusRow = c => `<label class="row-select status-row">
   <span>Status</span>
@@ -24,13 +23,13 @@ function followUpCard(c){
     <p class="label">Next follow-up</p>
     <h2>No follow-up scheduled</h2>
     <p class="when">Set a date so this lead isn't forgotten.</p>
-    <div class="btns one"><button class="btn btn-primary" data-act="follow">Set follow-up</button></div>
+    <div class="btns"><button class="btn btn-primary" data-act="log">Log interaction</button><button class="btn btn-white" data-act="follow">Set follow-up</button></div>
   </div>`;
   return `<div class="next s-${status(c.next_due)}">
     <p class="label">Next follow-up</p>
     <h2>${esc(followUpText(c))}</h2>
     <p class="when">${icon("clock")}${esc(dueLong(c.next_due))}</p>
-    <div class="btns one"><button class="btn btn-white" data-act="follow">Change</button></div>
+    <div class="btns"><button class="btn btn-primary" data-act="log">Log interaction</button><button class="btn btn-white" data-act="follow">Change date</button></div>
   </div>`;
 }
 
@@ -40,11 +39,12 @@ function endedCard(c){
     <p class="label">${won ? "Won" : "Lost"}${c.closed_at ? " · " + dayMonth(localDay(c.closed_at)) : ""}</p>
     <h2>${icon(won ? "trophy" : "archive")}${won ? "Customer confirmed" : "Not proceeding"}</h2>
     ${c.close_reason ? `<p class="when">${esc(c.close_reason)}</p>` : ""}
+    <div class="btns one"><button class="btn btn-white" data-act="log">Log interaction</button></div>
   </div>`;
 }
 
 function facts(c, activity){
-  const last = activity.find(a=>CONTACT.includes(a.kind));
+  const last = activity.find(a=>CONTACT_KINDS.includes(a.kind));
   const row = (label, value) => `<div><dt>${label}</dt><dd${value ? "" : ' class="none"'}>${esc(value || "—")}</dd></div>`;
   return `<dl class="box facts">
     ${row("Estimated budget", money(c.budget))}${row("Lead source", c.source)}
@@ -55,15 +55,18 @@ function facts(c, activity){
 const notesBox = c => `<p class="label section-label row-label">General notes<button type="button" class="link" data-act="notes">${c.notes ? "Edit" : "Add"}</button></p>
   <div class="box gnotes">${c.notes ? `<p>${esc(c.notes)}</p>` : `<p class="none">House type, sizes, budget, timing… anything worth keeping about this lead.</p>`}</div>`;
 
+/* Newest first. Interactions stand out; status and follow-up changes are quieter. */
 function historyBox(activity){
-  return `<p class="label section-label">History</p>
+  const at = iso => { const d = new Date(iso); return clock(`${d.getHours()}:${d.getMinutes()}`); };
+  return `<p class="label section-label row-label">History<button type="button" class="link" data-act="log">Log interaction</button></p>
   <div class="box history">
-    <form class="addnote"><input name="note" placeholder="Add to history…" maxlength="5000" autocomplete="off"><button class="link" hidden>Save</button></form>
     ${activity.map(a=>{
       const [first, ...rest] = a.text.split("\n");
       const title = a.kind==="note" ? "Note" : first, body = a.kind==="note" ? a.text : rest.join("\n");
-      return `<div class="event"><time>${esc(dayMonth(localDay(a.at)))}</time><div><b>${esc(title || KIND[a.kind] || a.kind)}</b>${body ? `<p>${esc(body)}</p>` : ""}</div></div>`;
-    }).join("")}
+      const quiet = ["status", "follow_up", "created", "edited", "stage", "moved"].includes(a.kind);
+      return `<div class="event${a.kind==="interaction" ? " talk" : quiet ? " quiet" : ""}"><time>${esc(dayMonth(localDay(a.at)))}<small>${esc(at(a.at))}</small></time>
+        <div><b>${esc(title || KIND[a.kind] || a.kind)}</b>${body ? `<p>${esc(body)}</p>` : ""}</div></div>`;
+    }).join("") || `<p class="none">Nothing logged yet.</p>`}
   </div>`;
 }
 
@@ -103,6 +106,7 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
   const act = (name, fn) => { const b = root.querySelector(`[data-act="${name}"]`); if (b) b.addEventListener("click", fn); };
   act("back", ()=>back(from==="Today" ? "/" : "/leads"));
   act("follow", ()=>followUpSheet(c, reload));
+  root.querySelectorAll('[data-act="log"]').forEach(b=>b.addEventListener("click", ()=>logSheet(c, reload)));
   act("notes", ()=>editNotes(root, c, reload));
 
   // status: saved as soon as it's chosen; Lost asks why first
@@ -116,17 +120,6 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
       const { client } = await api(`/clients/${c.id}`, { method: "PATCH", body: { stage: want } });
       updateClient(client); toast(want==="won" ? "Marked as Won" : "Status: " + statusLabel(want)); reload();
     } catch(err){ toast(err.message, true); sel.disabled = false; }
-  });
-
-  const form = root.querySelector(".addnote"), input = form.querySelector("input"), save = form.querySelector("button");
-  input.addEventListener("input", ()=>{ save.hidden = !input.value.trim(); });
-  form.addEventListener("submit", async e=>{
-    e.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-    save.disabled = true;
-    try { await api(`/clients/${c.id}/notes`, { method: "POST", body: { text } }); reload(); }
-    catch(err){ toast(err.message, true); save.disabled = false; }
   });
 }
 

@@ -158,12 +158,13 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 
 .section-label{ margin-top:24px; }
 .history{ padding:4px 16px; margin-top:0; }
-.addnote{ display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--line); }
-.addnote input{ flex:1; border:0; outline:0; padding:12px 0; font:400 16px/22px var(--font); background:none; color:var(--text); }
-.addnote .link{ font-size:15px; font-weight:600; }
 .event{ display:grid; grid-template-columns:52px 1fr; gap:8px; padding:12px 0; border-bottom:1px solid var(--line); }
 .event:last-child{ border-bottom:0; }
 .event time{ font-size:13px; color:var(--text-muted); padding-top:1px; }
+.event time small{ display:block; font-size:12px; line-height:16px; color:#A8A49D; }
+.event.talk b{ color:var(--accent); }
+.event.quiet b{ font-weight:500; color:var(--text-muted); }
+.history > p.none{ margin:0; padding:14px 0; color:#A8A49D; }
 .event b{ font-weight:600; }
 .event p{ margin:2px 0 0; color:var(--text-muted); white-space:pre-line; }
 
@@ -236,6 +237,10 @@ div.srow{ cursor:default; }
 .row-select .val{ color:var(--accent); font-weight:600; }
 .row-select .ic{ color:#B5B1AA; }
 .row-select select{ position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; font-size:16px; }
+.row-input{ display:flex; align-items:center; gap:8px; margin-top:12px; padding:8px 14px; min-height:48px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.row-input span{ flex:1; }
+.row-input input{ border:0; outline:0; background:none; font:500 16px/22px var(--font); color:var(--text); text-align:right; min-width:0; }
+.sheet .chips.pick-one{ margin-bottom:2px; }
 .sheet .btn-lg{ margin-top:16px; }
 
 /* ── Confirm dialog ── */
