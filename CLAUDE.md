@@ -85,7 +85,8 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      editable stages and close reasons are not built (reminders come in Phase 4).
    - Claude can't run remote D1 migrations (auto mode): Amin runs
      `npx wrangler d1 migrations apply DB --remote` before code that needs them is pushed.
-4. **Reminders** — notification when a step is due, 8:00 am morning summary.
+4. ✅ **Reminders** — notification when a step is due, 8:00 am morning summary.
+   Confirmed by Amin: a due-step reminder and the morning summary both arrived.
    - Cron Trigger every 5 min (`wrangler.jsonc` `triggers`) → `worker/reminders.js`.
      `plan()` decides what to send (pure): steps with a time → `remind_before` minutes
      before (0/5/10/15/30/60, default 15), skipped if over an hour late; morning summary at
