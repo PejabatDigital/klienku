@@ -102,7 +102,8 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      per device until reminders are on there; Face ID left out (60-day sessions).
    - `migrations/0003_reminders.sql`. Local: `npx wrangler dev … --test-scheduled`, then
      POST `/cdn-cgi/local/explorer/api/local/scheduled?worker=klienku` with `{"cron":"*/5 * * * *"}`.
-5. **Mac view** — sidebar layout, all-clients table.
+5. ✅ **Mac view** — sidebar layout, all-clients table.
+   Confirmed by Amin: working well on the Mac.
    - Wide screens (≥ 1024 px, `isWide()` in `src/ui.js`; Mac and iPad landscape) get
      `body.wide`: sidebar (`<aside class="side">` in index.html: Add client, Today with
      due count, Clients with open count, Settings, morning-summary note) instead of the
@@ -132,7 +133,7 @@ holds the icon). Read it with the Figma MCP server when connected.
 - Components: Lead card `3:51`, Tab bar `3:109`.
 - Process flows (FigJam): https://www.figma.com/board/uW8Dc0gGEkisy4lKzGukds
 - Phone keeps cards; the Mac "All leads" page is a compact table sorted by due date.
-- The designs say "Leads"; the brand speaks of clients. Confirm wording with Amin in Phase 3.
+- The designs say "Leads"; the app says "Clients" (decided by Amin in Phase 3).
 
 ### Tokens (from the Figma "Colors" variables)
 | Token | Value | Use |
