@@ -226,7 +226,7 @@ Phases (one at a time, each confirmed by Amin):
     under 1280 px Project hides too.
   - Add lead: name, phone, location, type, source, next follow-up first; budget and notes
     after ("can wait").
-- **V2.5 Reminders tidy-up** — built 1 Nov 2026, waiting for Amin to confirm.
+- ✅ **V2.5 Reminders tidy-up** — confirmed by Amin (live). Version 2 complete; next: real use, then small fixes.
   - `runReminders` loads all active leads (not only those with a date); `plan()` adds
     "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
     have no follow-up date yet." when that's all there is. Due-step reminders unchanged.
