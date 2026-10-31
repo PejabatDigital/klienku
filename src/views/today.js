@@ -1,10 +1,14 @@
-/* Today (Figma 1): overdue, due today, and coming up in the next 7 days. */
+/* Today (Figma 1; Mac: Figma 7): overdue, due today, and coming up in the next 7 days.
+   On wide screens the list sits on the left and the chosen client opens on the right
+   (?c=<id> keeps the choice). */
 import { cachedClients, loadClients } from "../api.js";
 import { addDays, longToday, status } from "../dates.js";
-import { card, esc, icon } from "../ui.js";
+import { card, esc, icon, isWide } from "../ui.js";
+import { clientView } from "./client.js";
 
 const byDue = (a, b) => a.next_due < b.next_due ? -1 : a.next_due > b.next_due ? 1 : 0;
 
+/* Returns the clients shown, in order. */
 function draw(root, clients){
   const open = clients.filter(c=>c.next_due).sort(byDue);
   const week = addDays(7);
@@ -34,9 +38,46 @@ function draw(root, clients){
       <div class="stat s-upcoming"><b>${groups.upcoming.length}</b>Coming up</div>
     </div>
     ${body}`;
+  return [...groups.overdue, ...groups.today, ...groups.upcoming];
 }
 
-export async function today(root){
+export async function today(root, params, ctx){
+  if (!isWide()) return phone(root);
+
+  root.innerHTML = `<div class="split"><section class="listcol"></section><section class="pane"></section></div>`;
+  const list = root.querySelector(".listcol"), pane = root.querySelector(".pane");
+  let chosen = new URLSearchParams(location.search).get("c"), shown = [];
+
+  const mark = () => list.querySelectorAll(".ccard").forEach(a=>a.classList.toggle("sel", a.getAttribute("href")===`/clients/${chosen}`));
+  const open = id => {
+    chosen = id;
+    history.replaceState(history.state, "", id ? `/?c=${id}` : "/");
+    mark();
+    if (id) clientView(pane, { id }, ctx, { embedded: true, onChange: refresh });
+    else pane.innerHTML = `<div class="empty small"><p>Choose a client on the left.</p></div>`;
+  };
+  // after a change in the pane: redraw the list from what's on this device, keep the choice
+  function refresh(){ shown = draw(list, cachedClients() || []); mark(); }
+  const show = (clients, first) => {
+    shown = draw(list, clients);
+    if (first || !chosen) open(shown.some(c=>c.id===chosen) ? chosen : (shown[0] && shown[0].id));
+    else mark();
+  };
+
+  list.addEventListener("click", e=>{
+    const a = e.target.closest(".ccard");
+    if (!a) return;
+    e.preventDefault(); e.stopPropagation();
+    open(a.getAttribute("href").split("/").pop());
+  });
+
+  const cached = cachedClients();
+  if (cached) show(cached, true); else list.innerHTML = `<div class="loading">Loading…</div>`;
+  try { const fresh = await loadClients(); if (cached) refresh(); else show(fresh, true); }
+  catch(e){ if (!cached) list.innerHTML = `<div class="empty small"><h2>Couldn't load</h2><p>${esc(e.message)}</p></div>`; }
+}
+
+async function phone(root){
   const cached = cachedClients();
   if (cached) draw(root, cached); else root.innerHTML = `<div class="loading">Loading…</div>`;
   try { draw(root, await loadClients()); }

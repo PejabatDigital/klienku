@@ -2,6 +2,9 @@
 import { dueShort, status } from "./dates.js";
 import { stageLabel, stepLabel } from "./flow.js";
 
+/* Mac and wide screens: sidebar layout, list and detail side by side, clients as a table. */
+export const isWide = () => matchMedia("(min-width: 1024px)").matches;
+
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c=>({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 
 /* Lucide-style icons, 24px grid, drawn with currentColor. */

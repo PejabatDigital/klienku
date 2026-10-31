@@ -1,11 +1,15 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
    /  Today · /clients  list · /clients/new  add · /clients/:id  detail ·
-   /clients/:id/edit  edit · /settings */
+   /clients/:id/edit  edit · /settings
+   Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar and + button. */
 import { registerSW } from "./pwa.js";
 import { refreshDevice } from "./push.js";
 import { maybeShowSetup } from "./views/setup.js";
 import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
+import { cachedClients, loadSettings } from "./api.js";
+import { clock, status } from "./dates.js";
+import { isWide } from "./ui.js";
 import { today } from "./views/today.js";
 import { clientsView } from "./views/clients.js";
 import { clientView } from "./views/client.js";
@@ -13,7 +17,7 @@ import { addView, editView } from "./views/form.js";
 import { settingsView } from "./views/settings.js";
 
 const view = document.getElementById("view");
-const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab");
+const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab"), side = document.getElementById("side");
 
 const ROUTES = [
   [/^\/$/, today, { tabs: true, fab: true }],
@@ -43,20 +47,43 @@ function render(){
   const path = location.pathname.replace(/\/+$/, "") || "/";
   const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
   if (!hit) return go("/", { replace: true });
-  tabbar.hidden = !hit.opts.tabs;
-  fab.hidden = !hit.opts.fab;
-  document.body.classList.toggle("has-tabs", !!hit.opts.tabs);
+  const wide = isWide();
+  document.body.classList.toggle("wide", wide);
+  tabbar.hidden = wide || !hit.opts.tabs;
+  fab.hidden = wide || !hit.opts.fab;
+  document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
   tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===path));
+  const section = path==="/" || (path.startsWith("/clients/") && history.state && history.state.from==="/") ? "/" : path.startsWith("/clients") ? "/clients" : path;
+  side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
+  view.className = "view v-" + (path==="/" ? "today" : path==="/clients" ? "clients" : path==="/settings" ? "settings" : "page");
   view.scrollTop = 0; window.scrollTo(0, 0);
   hit.fn(view, { id: hit.m[1] }, { go, back });
+  sideCounts();
 }
+
+/* Sidebar badges (due now, open clients) and the morning summary note. */
+function sideCounts(){
+  const clients = cachedClients() || [];
+  const due = clients.filter(c=>c.next_due && status(c.next_due)!=="upcoming").length;
+  const open = clients.filter(c=>c.next_due).length;
+  document.getElementById("countToday").textContent = due || "";
+  document.getElementById("countClients").textContent = open || "";
+  loadSettings().then(s=>{
+    const foot = document.getElementById("sideSummary");
+    foot.querySelector("span").textContent = s.morning_summary ? `Morning summary at ${clock(s.summary_time)}` : "Morning summary off";
+    foot.hidden = false;
+  }).catch(()=>{});
+}
+window.addEventListener("klienku:clients", sideCounts);
+window.addEventListener("klienku:settings", sideCounts);
+matchMedia("(min-width: 1024px)").addEventListener("change", ()=>{ if (!document.querySelector(".layer")) render(); });
 
 document.addEventListener("click", e=>{
   const a = e.target.closest("a[data-link]");
   if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault();
   const path = new URL(a.href).pathname;
-  if (path===location.pathname && a.closest(".tabbar")) return render();
+  if (path===location.pathname && a.closest(".tabbar, .side")) return render();
   go(path);
 });
 window.addEventListener("popstate", e=>{ depth = (e.state && e.state.depth) || 0; render(); });

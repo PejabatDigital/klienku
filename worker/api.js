@@ -1,7 +1,7 @@
 /* KlienKu API for clients and settings. Every route needs sign-in and only touches the
    signed-in user's rows.
 
-   GET    /api/clients                 every client (open, won and closed), small enough to send whole
+   GET    /api/clients                 every client (open, won and closed) with last_contact, small enough to send whole
    POST   /api/clients                 add a client with its first next step
    GET    /api/clients/:id             one client and its activity, newest first
    PATCH  /api/clients/:id             edit details, or fix stage / next step / due
@@ -88,7 +88,9 @@ const settings = async (db, user) => withDefaults(await db.prepare("SELECT * FRO
 /* ── Routes ── */
 const routes = [
   ["GET", /^\/api\/clients$/, async ({ db, user }) => {
-    const { results } = await db.prepare("SELECT * FROM clients WHERE user_id = ?1 ORDER BY next_due IS NULL, next_due, created_at").bind(user).all();
+    // last_contact: when something last happened with them (a step finished, or a note)
+    const { results } = await db.prepare(`SELECT c.*, (SELECT MAX(a.at) FROM activity a WHERE a.client_id = c.id AND a.kind IN ('done', 'no_reply', 'note')) AS last_contact
+      FROM clients c WHERE c.user_id = ?1 ORDER BY c.next_due IS NULL, c.next_due, c.created_at`).bind(user).all();
     return json({ clients: results });
   }],
 

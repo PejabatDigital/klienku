@@ -18,7 +18,11 @@ export async function api(path, { method = "GET", body } = {}){
 
 let clients = null, settings = null;
 try { clients = JSON.parse(localStorage.getItem(CACHE)); } catch(e){}
-const keep = () => { try { localStorage.setItem(CACHE, JSON.stringify(clients)); } catch(e){} };
+/* Saves the list on this device and tells the app it changed (sidebar counts). */
+const keep = () => {
+  try { localStorage.setItem(CACHE, JSON.stringify(clients)); } catch(e){}
+  window.dispatchEvent(new Event("klienku:clients"));
+};
 
 export const cachedClients = () => clients;
 export async function loadClients(){
@@ -29,8 +33,9 @@ export async function loadClients(){
 /* Puts a changed client into the list (or removes it when `gone`). */
 export function updateClient(client, gone = false){
   if (!clients) return;
+  const old = clients.find(c=>c.id===client.id);
   clients = clients.filter(c=>c.id!==client.id);
-  if (!gone) clients.push(client);
+  if (!gone) clients.push({ last_contact: old && old.last_contact, ...client });
   keep();
 }
 export function forgetClients(){ clients = null; try { localStorage.removeItem(CACHE); } catch(e){} }
@@ -41,5 +46,6 @@ export async function loadSettings(){
 }
 export async function saveSettings(change){
   settings = (await api("/settings", { method: "PUT", body: change })).settings;
+  window.dispatchEvent(new Event("klienku:settings"));
   return settings;
 }

@@ -103,6 +103,18 @@ to use later: not tied to any industry or company. A Kasah Kod app.
    - `migrations/0003_reminders.sql`. Local: `npx wrangler dev … --test-scheduled`, then
      POST `/cdn-cgi/local/explorer/api/local/scheduled?worker=klienku` with `{"cron":"*/5 * * * *"}`.
 5. **Mac view** — sidebar layout, all-clients table.
+   - Wide screens (≥ 1024 px, `isWide()` in `src/ui.js`; Mac and iPad landscape) get
+     `body.wide`: sidebar (`<aside class="side">` in index.html: Add client, Today with
+     due count, Clients with open count, Settings, morning-summary note) instead of the
+     tab bar and +. Phone layout unchanged. Re-renders when the width crosses 1024 px.
+   - Today (Figma 7): list left, chosen client right (`?c=<id>`), via
+     `clientView(..., { embedded: true, onChange })`; saving in the pane redraws the list.
+   - Clients (Figma 8): one table (Name, What they need, Stage, Next step, Due, Last
+     contact; Won/Closed show Result, Reason, Closed), Sort: Due date / Name / Last
+     contact / Recently added. Row → full client page. `GET /api/clients` adds
+     `last_contact` (latest done / no reply / note).
+   - Client page on wide: WhatsApp / Call / Edit top right, next step above stage.
+     "Close this client" link at the bottom (phone and Mac). Sheets are centred dialogs.
 6. **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +
    Privacy, backups, security check.
 7. **Go live** — two weeks of real use alongside pen and paper, then fix and adjust.

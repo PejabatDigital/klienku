@@ -3,8 +3,8 @@
 import { api, loadSettings, updateClient } from "../api.js";
 import { addDays, dayMonth, dueLong, localDay, status } from "../dates.js";
 import { STAGES, isOpen, stageLabel, stepLabel, whatsapp } from "../flow.js";
-import { closeSheet, doneSheet, moveSheet, openSheet, whenChips, wireWhen } from "../sheets.js";
-import { esc, icon, toast } from "../ui.js";
+import { closeClientSheet, closeSheet, doneSheet, moveSheet, openSheet, whenChips, wireWhen } from "../sheets.js";
+import { esc, icon, isWide, toast } from "../ui.js";
 
 const KIND = { created: "Added", note: "Note", done: "Done", no_reply: "No reply", moved: "Rescheduled",
   closed: "Closed", reopened: "Reopened", stage: "Stage changed", edited: "Edited" };
@@ -70,34 +70,43 @@ function reopenSheet(c, onSaved){
   });
 }
 
-export async function clientView(root, { id }, { back, go }){
+/* The client page. `embedded` puts it beside the Today list on wide screens (no Back);
+   `onChange` runs after anything is saved, so that list can refresh. */
+export async function clientView(root, { id }, { back, go }, { embedded = false, onChange } = {}){
   root.innerHTML = `<div class="loading">Loading…</div>`;
   let data;
   try { data = await api(`/clients/${id}`); }
   catch(e){ root.innerHTML = `<div class="empty small"><h2>Couldn't open this client</h2><p>${esc(e.message)}</p><a class="btn btn-white" href="/clients" data-link>All clients</a></div>`; return; }
-  const c = data.client, wa = whatsapp(c.phone);
+  const c = data.client, wa = whatsapp(c.phone), wide = isWide();
   updateClient(c);
-  const reload = () => clientView(root, { id }, { back, go });
+  const reload = () => { clientView(root, { id }, { back, go }, { embedded, onChange }); if (onChange) onChange(); };
   const from = history.state && history.state.from==="/" ? "Today" : "Clients";
 
-  root.innerHTML = `
-    <nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button><a class="link" href="/clients/${c.id}/edit" data-link>Edit</a></nav>
-    <header class="who">
+  const contact = (wa ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon("chat")}WhatsApp</a>` : "")
+    + (c.phone ? `<a class="btn btn-white" href="tel:${esc(c.phone.replace(/[^\d+]/g, ""))}">${icon("phone")}Call</a>` : "");
+  const who = `<div>
       <h1>${esc(c.name)}</h1>
       ${c.need || c.area ? `<p>${esc([c.need, c.area].filter(Boolean).join(" · "))}</p>` : ""}
       <p class="meta">${esc([c.phone, "Added " + dayMonth(localDay(c.created_at))].filter(Boolean).join(" · "))}</p>
-    </header>
-    ${c.phone ? `<div class="contact">
-      ${wa ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon("chat")}WhatsApp</a>` : ""}
-      <a class="btn btn-white" href="tel:${esc(c.phone.replace(/[^\d+]/g, ""))}">${icon("phone")}Call</a></div>` : ""}
-    ${isOpen(c) ? stepper(c.stage) + nextCard(c) : endedCard(c)}
-    ${historyBox(data.activity)}`;
+    </div>`;
+  const body = isOpen(c) ? (wide ? nextCard(c) + stepper(c.stage) : stepper(c.stage) + nextCard(c)) : endedCard(c);
+  const closeLink = isOpen(c) ? `<button type="button" class="link close-link" data-act="close">Close this client</button>` : "";
 
-  root.querySelector('[data-act="back"]').addEventListener("click", ()=>back(from==="Today" ? "/" : "/clients"));
+  root.innerHTML = wide ? `
+    ${embedded ? "" : `<nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button></nav>`}
+    <header class="who wide">${who}<div class="who-actions">${contact}<a class="btn btn-white" href="/clients/${c.id}/edit" data-link>Edit</a></div></header>
+    ${body}${historyBox(data.activity)}${closeLink}` : `
+    <nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button><a class="link" href="/clients/${c.id}/edit" data-link>Edit</a></nav>
+    <header class="who">${who}</header>
+    ${contact ? `<div class="contact">${contact}</div>` : ""}
+    ${body}${historyBox(data.activity)}${closeLink}`;
+
   const act = (name, fn) => { const b = root.querySelector(`[data-act="${name}"]`); if (b) b.addEventListener("click", fn); };
+  act("back", ()=>back(from==="Today" ? "/" : "/clients"));
   act("done", async ()=>doneSheet(c, await loadSettings().catch(()=>({ follow_up_days: 2, max_tries: 3, quote_after_visit_days: 2, quote_follow_up_days: 3 })), reload));
   act("move", ()=>moveSheet(c, reload));
   act("reopen", ()=>reopenSheet(c, reload));
+  act("close", ()=>closeClientSheet(c, reload));
 
   const form = root.querySelector(".addnote"), input = form.querySelector("input"), save = form.querySelector("button");
   input.addEventListener("input", ()=>{ save.hidden = !input.value.trim(); });
