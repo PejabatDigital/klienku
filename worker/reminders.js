@@ -2,13 +2,15 @@
    For each person with a device that accepts notifications:
    - a follow-up with a time (e.g. a 3:00 pm site visit): a notification `remind_before`
      minutes before it, if "Notify when a follow-up is due" is on;
-   - the morning summary at `summary_time`: overdue and due today, if it's on;
+   - the morning summary at `summary_time`: overdue, due today and active leads with no
+     follow-up, if it's on (skipped when there are none);
    - follow-ups with only a date get their own notification at `summary_time` instead, but
      only when the morning summary is off (otherwise the summary already lists them).
    Everything is worked out in the person's time zone. Each reminder goes once: leads
    remember the due value they were reminded about, settings the day of the last summary. */
 import { withDefaults } from "./api.js";
 import { sendPush } from "./push.js";
+import { CLOSED } from "../src/lists.js";
 
 const LATE = 60; // minutes: a reminder later than this isn't sent (Today and the summary show it)
 
@@ -26,8 +28,10 @@ const minutes = (date, time = "00:00") => {
 };
 const clock = hhmm => { const [h, m] = hhmm.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
 const step = c => c.next_step || "Follow up";
+const plural = (n, one, many) => `${n} ${n===1 ? one : many}`;
 
-/* What to send one person now: {messages, remindedIds, summaryDay}. Pure, so it can be tested. */
+/* What to send one person now: {messages, remindedIds, summaryDay}. Pure, so it can be tested.
+   `clients` are the person's active leads (with or without a follow-up). */
 export function plan(settings, clients, at = new Date()){
   const s = { ...withDefaults(settings), last_summary: settings && settings.last_summary }, local = localNow(s.timezone, at);
   const nowMin = minutes(local.date, local.time), summaryMin = minutes(local.date, s.summary_time);
@@ -54,10 +58,14 @@ export function plan(settings, clients, at = new Date()){
     summaryDay = local.date;
     const due = clients.filter(c=>c.next_due).sort((a, b)=>a.next_due < b.next_due ? -1 : 1);
     const overdue = due.filter(c=>c.next_due.slice(0, 10) < local.date), today = due.filter(c=>c.next_due.slice(0, 10)===local.date);
+    const none = clients.filter(c=>!c.next_due).length;
     if (overdue.length || today.length){
-      const parts = [overdue.length && `${overdue.length} overdue`, today.length && `${today.length} due today`].filter(Boolean);
+      const parts = [overdue.length && `${overdue.length} overdue`, today.length && `${today.length} due today`,
+        none && `${none} with no follow-up`].filter(Boolean);
       const first = (overdue[0] || today[0]);
       messages.push({ title: "Good morning", body: `${parts.join(", ")}. First: ${first.name} · ${step(first)}`, tag: "summary", url: "/" });
+    } else if (none){
+      messages.push({ title: "Good morning", body: `Nothing due today. ${plural(none, "lead has", "leads have")} no follow-up date yet.`, tag: "summary", url: "/" });
     }
   }
   return { messages, remindedIds, summaryDay, local };
@@ -69,7 +77,8 @@ export async function runReminders(env, at = new Date()){
   for (const { user_id: user } of users){
     const [settings, clients, subs] = await Promise.all([
       db.prepare("SELECT * FROM settings WHERE user_id = ?1").bind(user).first(),
-      db.prepare("SELECT id, name, next_step, next_due, notified_due FROM clients WHERE user_id = ?1 AND next_due IS NOT NULL").bind(user).all().then(r=>r.results),
+      // active leads; CLOSED are fixed keys from src/lists.js
+      db.prepare(`SELECT id, name, next_step, next_due, notified_due FROM clients WHERE user_id = ?1 AND stage NOT IN (${CLOSED.map(k=>`'${k}'`).join(", ")})`).bind(user).all().then(r=>r.results),
       db.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?1").bind(user).all().then(r=>r.results),
     ]);
     const { messages, remindedIds, summaryDay } = plan(settings, clients, at);

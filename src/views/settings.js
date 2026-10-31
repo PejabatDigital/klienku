@@ -67,7 +67,7 @@ export async function settingsView(root){
       ${pick("summary_time", "Summary time", s.summary_time, TIMES.includes(s.summary_time) ? TIMES : [s.summary_time, ...TIMES], clock)}
       ${pushState()==="ready" ? `<button type="button" class="srow" data-act="test"><span>Send a test notification</span>${icon("chevron")}</button>` : ""}
     </div>
-    <p class="hint">Follow-ups with a time remind you before. Follow-ups with only a date are in the morning summary.</p>
+    <p class="hint">Follow-ups with a time remind you before. Follow-ups with only a date, and leads with no follow-up yet, are in the morning summary.</p>
     <p class="label">Account</p>
     <div class="group">
       <div class="srow"><span>Email</span><b>${esc(user && user.email)}</b></div>

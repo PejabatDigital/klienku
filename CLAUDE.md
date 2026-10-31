@@ -215,7 +215,7 @@ Phases (one at a time, each confirmed by Amin):
     Leads), New this week. Mac: numbers and "Leads by status" (8 active statuses as small
     bars, Won/Lost totals) across the top, list left, lead right. Phone has no status bars.
   - `/leads?status=<key>` opens Leads filtered to that status (used by the status bars).
-- **V2.4 All Leads** — built 1 Nov 2026, waiting for Amin to confirm.
+- ✅ **V2.4 All Leads** — confirmed by Amin 1 Nov 2026 (live).
   - Mac table (`src/views/leads.js`): filters Status, Project, Source, Follow-up (Overdue,
     Due today, Next 7 days, Later, No follow-up) with Clear filters and "Showing N of M";
     sorts Follow-up date, Recently added, Oldest first, Last contacted, Name. Columns: Name,
@@ -226,8 +226,11 @@ Phases (one at a time, each confirmed by Amin):
     under 1280 px Project hides too.
   - Add lead: name, phone, location, type, source, next follow-up first; budget and notes
     after ("can wait").
-- **V2.5 Reminders tidy-up** — summary counts leads with no follow-up; email summary only
-  if Amin asks.
+- **V2.5 Reminders tidy-up** — built 1 Nov 2026, waiting for Amin to confirm.
+  - `runReminders` loads all active leads (not only those with a date); `plan()` adds
+    "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
+    have no follow-up date yet." when that's all there is. Due-step reminders unchanged.
+  - No email summary (only if Amin asks).
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"
