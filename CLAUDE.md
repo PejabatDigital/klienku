@@ -235,7 +235,7 @@ Phases (one at a time, each confirmed by Amin):
     done: true}`, logged "Follow-up done". Log interaction is a separate button under the
     card (and in the History heading); its sheet has type, note, when, status only.
   - Add lead has no follow-up section. Sources as above.
-- **V2.7 Today and Dashboard apart** — built 1 Nov 2026, waiting for Amin to confirm.
+- ✅ **V2.7 Today and Dashboard apart** — confirmed by Amin 1 Nov 2026 (live).
   - Today (`/`, `src/views/today.js`): date, a one-line count, Overdue / Due today / No
     follow-up scheduled / Coming up · next 7 days; Mac: list left, lead right. `?s=<list>`
     scrolls to a list. `groupsOf()` lives here and is shared with the Dashboard.
