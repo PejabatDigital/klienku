@@ -236,6 +236,17 @@ Phases (one at a time, each confirmed by Amin):
     card (and in the History heading); its sheet has type, note, when, status only.
   - Add lead has no follow-up section. Sources as above.
 - ✅ **V2.7 Today and Dashboard apart** — confirmed by Amin 1 Nov 2026 (live).
+- **V2.8 Dashboard contents** (decided 1 Nov 2026; to be designed in Figma first, then built):
+  - Period switch: This month · Last 3 months · All time.
+  - Active leads: every lead not Won/Lost, always "now" (ignores the period).
+  - For the period, counted by when the lead came in (`created_at`): Total leads; Win
+    rate = Won ÷ Total leads; Won value = sum of estimated budget of the Won leads;
+    Leads by project type (count only).
+  - Removed from the Dashboard: follow-up numbers (Today only), Leads by status, New this week.
+  - Figma (waiting for Amin's review): 18 · Desktop · Dashboard `24:311`, 19 · Dashboard
+    `27:412` (phone, scrolling), components in section "Dashboard components" `23:311`
+    (Period switch, Active leads card in navy #1E2A4A, Metric, Bar row and Bar row · compact
+    with Fill=0/25/50/75/100 variants).
   - Today (`/`, `src/views/today.js`): date, a one-line count, Overdue / Due today / No
     follow-up scheduled / Coming up · next 7 days; Mac: list left, lead right. `?s=<list>`
     scrolls to a list. `groupsOf()` lives here and is shared with the Dashboard.
