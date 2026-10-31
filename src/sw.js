@@ -5,6 +5,10 @@
    - A new version takes over straight away and is used from the next open.
    - Push messages from the Worker are shown as notifications; tapping one opens KlienKu. */
 const CACHE = "klienku-shell-" + VERSION;
+// pages of their own (not the app): network first, the cached copy when offline
+const PAGES = { "/signin": "/signin.html", "/privacy": "/privacy.html", "/terms": "/terms.html" };
+// a cached copy that came through a redirect can't answer a page load as it is
+const plain = r => r && r.redirected ? new Response(r.body, { status: r.status, headers: r.headers }) : r;
 
 self.addEventListener("install", e=>{
   e.waitUntil(caches.open(CACHE)
@@ -23,10 +27,11 @@ self.addEventListener("fetch", e=>{
   if (req.method!=="GET" || url.origin!==location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // API calls always go to the network
   if (req.mode==="navigate"){
-    // the app's screens (/, /clients/…, /settings) open from cache; /signin tries the network first
-    e.respondWith(url.pathname!=="/signin"
-      ? caches.match("/", {cacheName:CACHE}).then(r=>r || fetch(req))
-      : fetch(req).catch(()=>caches.match("/signin.html", {cacheName:CACHE})));
+    // the app's screens (/, /clients/…, /settings) open from cache
+    const page = PAGES[url.pathname.replace(/(\.html|\/)$/, "")];
+    e.respondWith(page
+      ? fetch(req).catch(()=>caches.match(page, {cacheName:CACHE}).then(plain))
+      : caches.match("/", {cacheName:CACHE}).then(r=>plain(r) || fetch(req)));
     return;
   }
   e.respondWith(caches.match(req, {cacheName:CACHE}).then(r=>r || fetch(req)));

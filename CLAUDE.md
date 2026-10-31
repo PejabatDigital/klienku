@@ -118,6 +118,27 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      "Close this client" link at the bottom (phone and Mac). Sheets are centred dialogs.
 6. **Polish and safety** — empty/loading/offline/error screens, profile + export, Terms +
    Privacy, backups, security check.
+   - Screens: offline note at the top (`#offlineBar`, lists keep showing what's saved on
+     the device); "Couldn't load / You're offline" with Try again (`problem()` in
+     `src/ui.js`); "Client not found" (`gone()`); "Page not found" for unknown paths.
+   - Settings → Account: Change password (sheet, Better Auth `change-password`, signs out
+     other devices), Download my data (`GET /api/export`, CSV with history; iPhone share
+     sheet, Mac Downloads), Sign out. About: Privacy Policy, Terms of Use, Contact
+     hello@kasahkod.cc. Danger zone: Delete my account (type DELETE; `DELETE /api/account`
+     removes everything, clears the device, then setup is open again). In `src/views/account.js`.
+   - `/privacy` and `/terms`: plain pages in `public/` (`legal.css`), linked from sign-in
+     (setup says creating an account agrees to them) and Settings. Not legal advice;
+     written plainly for Malaysia (PDPA 2010 mentioned). The service worker serves
+     /signin, /privacy, /terms network-first, the app's own paths from cache.
+   - Backups: D1 Time Travel (restore points for 7 days on the free plan, confirmed on);
+     restore steps in README. Plus Download my data.
+   - Security: Better Auth's rate limit was off in production (it needs NODE_ENV, which
+     Workers don't set); now on, stored in D1 (`migrations/0004_rate_limit.sql`), by
+     `cf-connecting-ip`: 3 sign-in tries per 10 s, 3 reset emails per minute. API
+     changes from another site's Origin get 403. Security headers for all pages in
+     `public/_headers` (CSP: own scripts only, no framing). CSV cells starting with = or @
+     are made plain text. `npm audit`: 0 issues. Not built: two-step code (Figma 16),
+     editable stages and close reasons.
 7. **Go live** — two weeks of real use alongside pen and paper, then fix and adjust.
 
 ## Design

@@ -13,7 +13,7 @@ function serviceWorker(){
     configResolved(c){ outDir = c.build.outDir; },
     closeBundle(){
       const walk = d => readdirSync(d, {withFileTypes:true}).flatMap(f=>f.isDirectory() ? walk(join(d,f.name)) : [join(d,f.name)]);
-      const files = walk(outDir).filter(f=>!f.endsWith("sw.js") && !f.endsWith(".map") && !f.endsWith(".DS_Store")).sort();
+      const files = walk(outDir).filter(f=>!/(sw\.js|\.map|\.DS_Store|_headers)$/.test(f)).sort();
       const hash = createHash("sha256");
       files.forEach(f=>hash.update(f).update(readFileSync(f)));
       const shell = files.map(f=>"/"+relative(outDir, f).split(sep).join("/")).map(u=>u==="/index.html" ? "/" : u);

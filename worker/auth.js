@@ -1,6 +1,6 @@
 /* Sign-in with email and password (Better Auth), stored in D1. Its routes live under
    /api/auth/*: POST sign-up/email, sign-in/email, sign-out, request-password-reset,
-   reset-password, send-verification-email; GET get-session, verify-email,
+   reset-password, change-password, send-verification-email; GET get-session, verify-email,
    reset-password/:token.
 
    Only the first account can be created (Amin's) while OPEN_SIGNUP is "false".
@@ -55,6 +55,11 @@ export function getAuth(env){
           }
         }),
       },
+      // Slow down password guessing: 3 sign-in tries per 10 s, 3 reset emails per minute, per
+      // internet address. Kept in D1 ("rateLimit"), because each Worker copy has its own memory
+      // and Workers don't set NODE_ENV, which Better Auth would otherwise need to turn this on.
+      rateLimit: { enabled: true, storage: "database" },
+      advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
       // stay signed in for 60 days, renewed (at most daily) whenever the app is opened
       session: { expiresIn: 60 * DAY, updateAge: DAY },
       telemetry: { enabled: false },

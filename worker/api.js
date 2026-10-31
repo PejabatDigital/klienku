@@ -10,7 +10,9 @@
    POST   /api/clients/:id/close       won | lost | ended, with a reason and note
    POST   /api/clients/:id/reopen      back to open with a new next step
    DELETE /api/clients/:id             remove for good (duplicates and mistakes)
-   GET    /api/settings, PUT /api/settings   follow-up rules and reminders */
+   GET    /api/settings, PUT /api/settings   follow-up rules and reminders
+   GET    /api/export                  every client and its history as a spreadsheet file (CSV)
+   DELETE /api/account                 delete the signed-in user and everything they own */
 
 export const STAGES = ["new", "contacting", "site_visit", "quote_sent", "negotiating"];
 const OUTCOMES = ["won", "lost", "ended"];
@@ -34,7 +36,7 @@ const SETTINGS = {
 const KEYS = Object.keys(SETTINGS);
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
-  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }
 });
 class HttpError extends Error { constructor(status, message){ super(message); this.status = status; } }
 const bad = message => { throw new HttpError(400, message); };
@@ -84,6 +86,29 @@ export function withDefaults(row){
   return out;
 }
 const settings = async (db, user) => withDefaults(await db.prepare("SELECT * FROM settings WHERE user_id = ?1").bind(user).first());
+
+/* ── Download (CSV) ── one row per client, its history in the last column. Dates are in the
+   user's time zone; a byte-order mark makes Excel read it as UTF-8. */
+const STAGE_NAMES = { new: "New", contacting: "Contacting", site_visit: "Site visit", quote_sent: "Quote sent",
+  negotiating: "Negotiating", won: "Won", closed: "Closed" };
+const RESULTS = { won: "Won", lost: "Lost", ended: "Ended by you" };
+const cell = v => {
+  let t = String(v ?? "");
+  if (/^[=@\t]/.test(t)) t = "'" + t; // never let a spreadsheet run it as a formula
+  return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+function csv(clients, activity, timeZone){
+  const ymd = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  const day = iso => iso ? ymd.format(new Date(iso)) : "";
+  const history = {};
+  for (const a of activity) (history[a.client_id] ||= []).push(`${day(a.at)}  ${a.text.replace(/\n/g, " — ")}`);
+  const rows = [["Name", "Phone", "What they need", "Area", "Stage", "Result", "Reason", "Next step", "Due", "Tries",
+    "Added", "Closed", "Last contact", "History"]];
+  for (const c of clients) rows.push([c.name, c.phone, c.need, c.area, STAGE_NAMES[c.stage] || c.stage, RESULTS[c.outcome] || "",
+    c.close_reason, c.next_step, (c.next_due || "").replace("T", " "), c.tries, day(c.created_at), day(c.closed_at),
+    day(c.last_contact), (history[c.id] || []).join("\n")]);
+  return "\uFEFF" + rows.map(r=>r.map(cell).join(",")).join("\r\n") + "\r\n";
+}
 
 /* ── Routes ── */
 const routes = [
@@ -205,6 +230,32 @@ const routes = [
     await db.batch([
       db.prepare("DELETE FROM activity WHERE client_id = ?1 AND user_id = ?2").bind(cid, user),
       db.prepare("DELETE FROM clients WHERE id = ?1 AND user_id = ?2").bind(cid, user),
+    ]);
+    return json({ ok: true });
+  }],
+
+  ["GET", /^\/api\/export$/, async ({ db, user }) => {
+    const [{ results: clients }, { results: activity }, s] = await Promise.all([
+      db.prepare(`SELECT c.*, (SELECT MAX(a.at) FROM activity a WHERE a.client_id = c.id AND a.kind IN ('done', 'no_reply', 'note')) AS last_contact
+        FROM clients c WHERE c.user_id = ?1 ORDER BY c.name COLLATE NOCASE`).bind(user).all(),
+      db.prepare("SELECT client_id, text, at FROM activity WHERE user_id = ?1 ORDER BY at, rowid").bind(user).all(),
+      settings(db, user),
+    ]);
+    const date = new Intl.DateTimeFormat("en-CA", { timeZone: s.timezone }).format(new Date());
+    return new Response(csv(clients, activity, s.timezone), { headers: {
+      "content-type": "text/csv; charset=utf-8", "cache-control": "no-store",
+      "content-disposition": `attachment; filename="klienku-clients-${date}.csv"`,
+    } });
+  }],
+
+  // everything of theirs, then the account itself; the session goes too, so they're signed out
+  ["DELETE", /^\/api\/account$/, async ({ db, user }) => {
+    await db.batch([
+      ...["activity", "clients", "settings", "push_subscriptions"].map(t=>db.prepare(`DELETE FROM ${t} WHERE user_id = ?1`).bind(user)),
+      db.prepare(`DELETE FROM "verification" WHERE "value" = ?1`).bind(user),
+      db.prepare(`DELETE FROM "session" WHERE "userId" = ?1`).bind(user),
+      db.prepare(`DELETE FROM "account" WHERE "userId" = ?1`).bind(user),
+      db.prepare(`DELETE FROM "user" WHERE "id" = ?1`).bind(user),
     ]);
     return json({ ok: true });
   }],

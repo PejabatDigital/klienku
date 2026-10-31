@@ -21,6 +21,9 @@ const PATHS = {
   phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
   chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
   trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  offline: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>',
+  search_off: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8.5 8.5l5 5M13.5 8.5l-5 5"/>',
   archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
 };
 export const icon = (name, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name]}</svg>`;
@@ -39,6 +42,19 @@ export function card(c){
     ${step ? `<div class="ccard-chips">${step}</div>` : ""}
   </a>`;
 }
+
+/* When a screen can't load: offline, or something went wrong, with Try again. */
+export function problem(root, e, retry){
+  root.innerHTML = `<div class="empty small">${icon(e.offline ? "offline" : "alert")}
+    <h2>${e.offline ? "You're offline" : "Couldn't load"}</h2>
+    <p>${e.offline ? "Connect to the internet, then try again." : esc(e.message)}</p>
+    <button type="button" class="btn btn-white" data-retry>Try again</button></div>`;
+  root.querySelector("[data-retry]").addEventListener("click", retry);
+}
+
+/* A client that's no longer there (deleted, or a wrong link). */
+export const gone = root => { root.innerHTML = `<div class="empty small">${icon("search_off")}<h2>Client not found</h2>
+  <p>This client may have been deleted.</p><a class="btn btn-white" href="/clients" data-link>All clients</a></div>`; };
 
 /* A short message at the bottom of the screen. */
 export function toast(text, isError = false){

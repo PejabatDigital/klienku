@@ -1,12 +1,14 @@
 /* Settings (Figma 6): reminders (this device, due-step notifications, morning summary),
-   follow-up rules, account. Changes save straight away. */
+   follow-up rules, account (change password, download my data, sign out), about, and
+   delete my account. Changes save straight away. */
 import { forgetClients, loadSettings, saveSettings } from "../api.js";
 import { currentUser, signOut } from "../account.js";
 import { clock } from "../dates.js";
 import { isIOS } from "../pwa.js";
 import { deviceOn, pushState, sendTest, turnOff, turnOn } from "../push.js";
 import { closeSheet, openSheet } from "../sheets.js";
-import { esc, icon, toast } from "../ui.js";
+import { deleteSheet, downloadSheet, passwordSheet } from "./account.js";
+import { esc, icon, problem, toast } from "../ui.js";
 
 const RULES = [
   { key: "follow_up_days", label: "No reply → follow up after", unit: "day", max: 14 },
@@ -55,7 +57,7 @@ export async function settingsView(root){
   root.innerHTML = `<header class="head"><h1>Settings</h1></header><div class="loading">Loading…</div>`;
   let s, user, device;
   try { [s, user, device] = await Promise.all([loadSettings(), currentUser(), deviceRow()]); }
-  catch(e){ root.innerHTML = `<header class="head"><h1>Settings</h1></header><div class="empty small"><p>${esc(e.message)}</p></div>`; return; }
+  catch(e){ problem(root, e, ()=>settingsView(root)); root.insertAdjacentHTML("afterbegin", `<header class="head"><h1>Settings</h1></header>`); return; }
 
   // reminders use the time zone of the device last used here
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -79,8 +81,19 @@ export async function settingsView(root){
     <p class="label">Account</p>
     <div class="group">
       <div class="srow"><span>Email</span><b>${esc(user && user.email)}</b></div>
+      <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
+      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your clients and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
       <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
     </div>
+    <p class="label">About</p>
+    <div class="group">
+      <a class="srow" href="/privacy"><span>Privacy Policy</span>${icon("chevron")}</a>
+      <a class="srow" href="/terms"><span>Terms of Use</span>${icon("chevron")}</a>
+      <a class="srow" href="mailto:hello@kasahkod.cc?subject=KlienKu"><span>Contact</span><b>hello@kasahkod.cc</b></a>
+    </div>
+    <p class="label">Danger zone</p>
+    <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
+      <span>Removes your account and all your clients for good.</span></button>
     <p class="foot">KlienKu · { kasah kod }</p>`;
 
   // settings saved on the server
@@ -104,6 +117,9 @@ export async function settingsView(root){
   });
   const test = root.querySelector('[data-act="test"]');
   if (test) test.addEventListener("click", testSheet);
+  root.querySelector('[data-act="password"]').addEventListener("click", passwordSheet);
+  root.querySelector('[data-act="download"]').addEventListener("click", downloadSheet);
+  root.querySelector('[data-act="delete"]').addEventListener("click", ()=>deleteSheet(user && user.email));
   root.querySelector('[data-act="signout"]').addEventListener("click", async ()=>{
     try { await turnOff().catch(()=>{}); await signOut(); forgetClients(); location.replace("/signin"); }
     catch(e){ toast("Couldn't sign out. Check your connection and try again.", true); }

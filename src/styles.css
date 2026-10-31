@@ -77,3 +77,8 @@ body{
 .note{ display:flex; align-items:center; justify-content:center; gap:8px; margin:0; font-size:13px; color:var(--text-muted); }
 .note svg{ width:16px; height:16px; }
 .tip{ margin:0; padding:12px 14px; border-radius:12px; background:var(--subtle); font-size:13px; color:var(--text-muted); }
+
+/* Terms and Privacy links (Phase 6) */
+.agree{ margin:0; text-align:center; font-size:13px; line-height:18px; color:var(--text-muted); }
+.legal{ margin:16px 0 0; text-align:center; font-size:13px; color:var(--text-muted); }
+.agree a, .legal a{ color:inherit; }

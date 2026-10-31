@@ -9,7 +9,7 @@ import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
 import { cachedClients, loadSettings } from "./api.js";
 import { clock, status } from "./dates.js";
-import { isWide } from "./ui.js";
+import { icon, isWide } from "./ui.js";
 import { today } from "./views/today.js";
 import { clientsView } from "./views/clients.js";
 import { clientView } from "./views/client.js";
@@ -26,7 +26,13 @@ const ROUTES = [
   [/^\/clients\/([\w-]+)\/edit$/, editView, {}],
   [/^\/clients\/([\w-]+)$/, clientView, {}],
   [/^\/settings$/, settingsView, { tabs: true }],
+  [/./, notFound, {}],
 ];
+
+function notFound(root){
+  root.innerHTML = `<div class="empty">${icon("search_off")}<h2>Page not found</h2>
+    <p>This page doesn't exist. It may be an old or mistyped link.</p><a class="btn btn-primary" href="/" data-link>Go to Today</a></div>`;
+}
 
 let depth = 0; // how many in-app pages are behind this one, so Back can use history
 
@@ -46,7 +52,6 @@ function render(){
   closeSheet();
   const path = location.pathname.replace(/\/+$/, "") || "/";
   const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
-  if (!hit) return go("/", { replace: true });
   const wide = isWide();
   document.body.classList.toggle("wide", wide);
   tabbar.hidden = wide || !hit.opts.tabs;
@@ -92,12 +97,23 @@ document.addEventListener("visibilitychange", ()=>{
   if (document.visibilityState==="visible" && (location.pathname==="/" || location.pathname==="/clients") && !document.querySelector(".layer")) render();
 });
 
+/* Offline: a note at the top; back online: refresh what's on screen. */
+function connection(){
+  const offline = !navigator.onLine, bar = document.getElementById("offlineBar"), was = !bar.hidden;
+  bar.hidden = !offline;
+  document.body.classList.toggle("is-offline", offline);
+  if (was && !offline && !document.querySelector(".layer")) render();
+}
+window.addEventListener("online", connection);
+window.addEventListener("offline", connection);
+
 async function start(){
   registerSW();
   const user = await currentUser();
   if (!user) return location.replace("/signin");
   depth = (history.state && history.state.depth) || 0;
   render();
+  connection();
   refreshDevice();
   maybeShowSetup();
 }

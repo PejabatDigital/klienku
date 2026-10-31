@@ -1,0 +1,18 @@
+/* Privacy Policy and Terms of Use (public/privacy.html, public/terms.html). */
+:root{ --bg:#F5F4F1; --text:#1C1B19; --muted:#6B6862; --accent:#C9581E; --navy:#1E2A4A; --line:#E6E3DD; }
+body{ margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+  font:400 16px/26px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+main{ max-width:640px; margin:0 auto;
+  padding:max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 56px max(20px, env(safe-area-inset-left)); }
+.back{ display:inline-flex; align-items:center; gap:4px; color:var(--accent); font-weight:600; text-decoration:none; padding:8px 0; }
+.brand{ display:flex; align-items:center; gap:10px; margin:24px 0 0; font-size:20px; font-weight:700; letter-spacing:-.02em; color:var(--navy); }
+.brand img{ border-radius:10px; }
+.brand b{ color:var(--accent); }
+h1{ font-size:32px; line-height:38px; font-weight:700; letter-spacing:-.02em; margin:16px 0 4px; }
+h2{ font-size:18px; line-height:26px; font-weight:600; margin:32px 0 4px; }
+p, ul{ margin:8px 0; }
+ul{ padding-left:22px; }
+li{ margin:4px 0; }
+.muted{ color:var(--muted); font-size:14px; line-height:20px; }
+a{ color:var(--accent); }
+footer{ margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }

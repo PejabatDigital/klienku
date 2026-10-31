@@ -3,7 +3,7 @@
    (?c=<id> keeps the choice). */
 import { cachedClients, loadClients } from "../api.js";
 import { addDays, longToday, status } from "../dates.js";
-import { card, esc, icon, isWide } from "../ui.js";
+import { card, esc, icon, isWide, problem } from "../ui.js";
 import { clientView } from "./client.js";
 
 const byDue = (a, b) => a.next_due < b.next_due ? -1 : a.next_due > b.next_due ? 1 : 0;
@@ -74,12 +74,12 @@ export async function today(root, params, ctx){
   const cached = cachedClients();
   if (cached) show(cached, true); else list.innerHTML = `<div class="loading">Loading…</div>`;
   try { const fresh = await loadClients(); if (cached) refresh(); else show(fresh, true); }
-  catch(e){ if (!cached) list.innerHTML = `<div class="empty small"><h2>Couldn't load</h2><p>${esc(e.message)}</p></div>`; }
+  catch(e){ if (!cached) problem(list, e, ()=>today(root, params, ctx)); }
 }
 
 async function phone(root){
   const cached = cachedClients();
   if (cached) draw(root, cached); else root.innerHTML = `<div class="loading">Loading…</div>`;
   try { draw(root, await loadClients()); }
-  catch(e){ if (!cached) root.innerHTML = `<div class="empty small"><h2>Couldn't load</h2><p>${esc(e.message)}</p></div>`; }
+  catch(e){ if (!cached) problem(root, e, ()=>phone(root)); }
 }

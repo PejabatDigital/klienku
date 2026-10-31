@@ -4,7 +4,7 @@ import { api, loadSettings, updateClient } from "../api.js";
 import { addDays, dayMonth, dueLong, localDay, status } from "../dates.js";
 import { STAGES, isOpen, stageLabel, stepLabel, whatsapp } from "../flow.js";
 import { closeClientSheet, closeSheet, doneSheet, moveSheet, openSheet, whenChips, wireWhen } from "../sheets.js";
-import { esc, icon, isWide, toast } from "../ui.js";
+import { esc, gone, icon, isWide, problem, toast } from "../ui.js";
 
 const KIND = { created: "Added", note: "Note", done: "Done", no_reply: "No reply", moved: "Rescheduled",
   closed: "Closed", reopened: "Reopened", stage: "Stage changed", edited: "Edited" };
@@ -76,7 +76,10 @@ export async function clientView(root, { id }, { back, go }, { embedded = false,
   root.innerHTML = `<div class="loading">Loading…</div>`;
   let data;
   try { data = await api(`/clients/${id}`); }
-  catch(e){ root.innerHTML = `<div class="empty small"><h2>Couldn't open this client</h2><p>${esc(e.message)}</p><a class="btn btn-white" href="/clients" data-link>All clients</a></div>`; return; }
+  catch(e){
+    if (e.status===404) gone(root); else problem(root, e, ()=>clientView(root, { id }, { back, go }, { embedded, onChange }));
+    return;
+  }
   const c = data.client, wa = whatsapp(c.phone), wide = isWide();
   updateClient(c);
   const reload = () => { clientView(root, { id }, { back, go }, { embedded, onChange }); if (onChange) onChange(); };

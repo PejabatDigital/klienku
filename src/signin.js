@@ -14,7 +14,7 @@ const MODES = {
   signin: { title: "Welcome back", intro: "Sign in to see who to follow up with today.", button: "Sign in",
             email: true, password: "current-password", forgot: true, brand: true, note: true },
   setup:  { title: "Set up KlienKu", intro: "Create your account. Only you will be able to sign in.", button: "Create account",
-            email: true, password: "new-password", confirm: true, brand: true },
+            email: true, password: "new-password", confirm: true, brand: true, agree: true },
   forgot: { title: "Forgot password?", intro: "Enter your email and we'll send you a link to set a new password.", button: "Send reset link",
             email: true, back: true, badge: "mail" },
   sent:   { title: "Check your email", back: true, badge: "mail", sent: true },
@@ -38,6 +38,7 @@ function show(m, message = "", isError = false){
   $("passwordLabel").textContent = c.passwordLabel || "Password";
   $("confirmField").hidden = $("rules").hidden = !c.confirm;
   $("forgotLink").hidden = !c.forgot;
+  $("agree").hidden = !c.agree;
   $("back").hidden = !c.back;
   $("brand").hidden = !c.brand;
   $("badge").hidden = !c.badge;

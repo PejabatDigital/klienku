@@ -9,10 +9,10 @@ export async function api(path, { method = "GET", body } = {}){
       method, headers: body ? { "content-type": "application/json" } : {},
       body: body ? JSON.stringify(body) : undefined,
     });
-  } catch(e){ throw new Error("You're offline. Try again when you're back online."); }
+  } catch(e){ throw Object.assign(new Error("You're offline. Try again when you're back online."), { offline: true }); }
   if (r.status===401){ location.replace("/signin"); throw new Error("Please sign in again."); }
   const data = await r.json().catch(()=>({}));
-  if (!r.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+  if (!r.ok) throw Object.assign(new Error(data.error || "Something went wrong. Please try again."), { status: r.status });
   return data;
 }
 

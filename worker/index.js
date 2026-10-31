@@ -8,20 +8,25 @@
    POST   /api/push/subscribe  remember this device for reminders (signed in)
    DELETE /api/push/subscribe  forget this device ({endpoint}) (signed in)
    POST   /api/push/test       remember this device and send it a test notification (signed in)
-   /api/clients…, /api/settings   see worker/api.js */
+   /api/clients…, /api/settings, /api/export, /api/account   see worker/api.js
+
+   Changes (anything but GET) must come from KlienKu's own pages: a request another site
+   sends with this browser's cookie is refused. */
 import { handleApi } from "./api.js";
 import { getAuth, getUserId, signupOpen } from "./auth.js";
 import { isPushService, sendPush } from "./push.js";
 import { runReminders } from "./reminders.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
-  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+  status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }
 });
 
 export default {
   async fetch(request, env, ctx){
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/auth/")) return getAuth(env).handler(request);
+    const origin = request.headers.get("origin");
+    if (request.method!=="GET" && origin && origin!==new URL(env.BETTER_AUTH_URL).origin) return json({ error: "Not allowed" }, 403);
     try {
       if (url.pathname==="/api/health"){
         await env.DB.prepare("SELECT 1").first();
@@ -36,7 +41,7 @@ export default {
         if (request.method==="POST") return subscribe(request, env, user);
         if (request.method==="DELETE") return unsubscribe(request, env, user);
       }
-      if (/^\/api\/(clients|settings)(\/|$)/.test(url.pathname)){
+      if (/^\/api\/(clients|settings|export|account)(\/|$)/.test(url.pathname)){
         const res = await handleApi(request, env, await getUserId(request, env));
         if (res) return res;
       }

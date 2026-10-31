@@ -357,3 +357,20 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   body.wide .grab{ display:none; }
   body.wide .toast{ left:calc(50% + 120px); bottom:32px; }
 }
+
+/* ── Offline (Phase 6) ── a small note at the top while there's no connection */
+.offline-bar{
+  position:fixed; z-index:30; top:calc(env(safe-area-inset-top) + 8px); left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:8px; margin:0; padding:6px 14px; border-radius:999px; white-space:nowrap;
+  background:#1E2A4A; color:#fff; font-size:13px; line-height:18px; font-weight:500; box-shadow:var(--shadow);
+}
+.offline-bar svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+body.is-offline .view{ padding-top:calc(env(safe-area-inset-top) + 52px); }
+@media (min-width: 1024px){ body.wide .offline-bar{ left:calc(50% + 120px); } }
+
+/* ── Account sheets (Phase 6) ── */
+.sheet .pw{ display:grid; gap:10px; }
+.sheet .pw .rules{ margin:2px 0 4px; }
+.sheet .pw .btn-lg{ margin-top:6px; }
+.delete-account .field{ margin:4px 0 14px; }
+a.srow{ text-decoration:none; }

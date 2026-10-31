@@ -3,7 +3,7 @@
 import { cachedClients, loadClients } from "../api.js";
 import { STAGES, stageLabel, stepLabel } from "../flow.js";
 import { clock, dayMonth, dueShort, localDay, status, timeOf } from "../dates.js";
-import { card, esc, icon, isWide } from "../ui.js";
+import { card, esc, icon, isWide, problem } from "../ui.js";
 
 const KEY = "kk:clientsView";
 let view = { tab: "open", stage: "all", q: "", sort: "due" };
@@ -117,5 +117,5 @@ export async function clientsView(root, params, { go }){
   if (sort) sort.addEventListener("change", ()=>{ view.sort = sort.value; keep(); sort.parentElement.querySelector("b").textContent = SORTS[view.sort][0]; redraw(); });
   if (cachedClients()) redraw();
   try { clients = await loadClients(); redraw(); }
-  catch(e){ if (!cachedClients()) root.querySelector(".list").innerHTML = `<div class="empty small"><p>${esc(e.message)}</p></div>`; }
+  catch(e){ if (!cachedClients()) problem(root.querySelector(".list"), e, ()=>clientsView(root, params, { go })); }
 }

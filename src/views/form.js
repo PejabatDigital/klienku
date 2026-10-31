@@ -3,7 +3,7 @@ import { api, updateClient } from "../api.js";
 import { addDays, timeOf, today } from "../dates.js";
 import { STAGES, isOpen } from "../flow.js";
 import { confirmDialog, whenChips, wireWhen } from "../sheets.js";
-import { esc, toast } from "../ui.js";
+import { esc, gone, problem, toast } from "../ui.js";
 
 const FIRST = [
   { label: "Reply / contact", step: "Reply to first message" },
@@ -79,7 +79,7 @@ export async function editView(root, { id }, { back, go }){
   root.innerHTML = `<div class="loading">Loading…</div>`;
   let c;
   try { c = (await api(`/clients/${id}`)).client; }
-  catch(e){ root.innerHTML = `<div class="empty small"><p>${esc(e.message)}</p></div>`; return; }
+  catch(e){ if (e.status===404) gone(root); else problem(root, e, ()=>editView(root, { id }, { back, go })); return; }
   const open = isOpen(c), due = c.next_due || "";
   root.innerHTML = `
     <form class="form" novalidate>
