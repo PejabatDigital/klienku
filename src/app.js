@@ -1,5 +1,5 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
-   /  Dashboard · /leads  list · /leads/new  add · /leads/:id  detail ·
+   /  Today · /dashboard · /leads  list · /leads/new  add · /leads/:id  detail ·
    /leads/:id/edit  edit · /settings  (old /clients… links go to /leads…)
    Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar and + button. */
 import { registerSW } from "./pwa.js";
@@ -11,6 +11,7 @@ import { cachedClients, loadSettings } from "./api.js";
 import { clock, status } from "./dates.js";
 import { isActive } from "./flow.js";
 import { icon, isWide } from "./ui.js";
+import { today } from "./views/today.js";
 import { dashboard } from "./views/dashboard.js";
 import { leadsView } from "./views/leads.js";
 import { leadView } from "./views/lead.js";
@@ -21,7 +22,8 @@ const view = document.getElementById("view");
 const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab"), side = document.getElementById("side");
 
 const ROUTES = [
-  [/^\/$/, dashboard, { tabs: true, fab: true }],
+  [/^\/$/, today, { tabs: true, fab: true }],
+  [/^\/dashboard$/, dashboard, { tabs: true, fab: true }],
   [/^\/leads$/, leadsView, { tabs: true, fab: true }],
   [/^\/leads\/new$/, addView, {}],
   [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
@@ -32,7 +34,7 @@ const ROUTES = [
 
 function notFound(root){
   root.innerHTML = `<div class="empty">${icon("search_off")}<h2>Page not found</h2>
-    <p>This page doesn't exist. It may be an old or mistyped link.</p><a class="btn btn-primary" href="/" data-link>Go to Dashboard</a></div>`;
+    <p>This page doesn't exist. It may be an old or mistyped link.</p><a class="btn btn-primary" href="/" data-link>Go to Today</a></div>`;
 }
 
 let depth = 0; // how many in-app pages are behind this one, so Back can use history
@@ -60,9 +62,11 @@ function render(){
   fab.hidden = wide || !hit.opts.fab;
   document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
   tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===path));
-  const section = path==="/" || (path.startsWith("/leads/") && history.state && history.state.from==="/") ? "/" : path.startsWith("/leads") ? "/leads" : path;
+  // a lead page opened from Today or the Dashboard keeps that item lit in the sidebar
+  const from = history.state && history.state.from;
+  const section = path.startsWith("/leads/") && (from==="/" || from==="/dashboard") ? from : path.startsWith("/leads") ? "/leads" : path;
   side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
-  view.className = "view v-" + (path==="/" ? "dash" : path==="/leads" ? "leads" : path==="/settings" ? "settings" : "page");
+  view.className = "view v-" + (path==="/" ? "today" : path==="/dashboard" ? "dash" : path==="/leads" ? "leads" : path==="/settings" ? "settings" : "page");
   view.scrollTop = 0; window.scrollTo(0, 0);
   hit.fn(view, { id: hit.m[1] }, { go, back });
   sideCounts();
@@ -95,7 +99,7 @@ document.addEventListener("click", e=>{
 window.addEventListener("popstate", e=>{ depth = (e.state && e.state.depth) || 0; render(); });
 // coming back to the app later: refresh what's due
 document.addEventListener("visibilitychange", ()=>{
-  if (document.visibilityState==="visible" && (location.pathname==="/" || location.pathname==="/leads") && !document.querySelector(".layer")) render();
+  if (document.visibilityState==="visible" && ["/", "/dashboard", "/leads"].includes(location.pathname) && !document.querySelector(".layer")) render();
 });
 
 /* Offline: a note at the top; back online: refresh what's on screen. */

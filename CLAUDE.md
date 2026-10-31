@@ -230,14 +230,21 @@ Phases (one at a time, each confirmed by Amin):
   - Add lead: name, phone, location, type, source, next follow-up first; budget and notes
     after ("can wait").
 - ✅ **V2.5 Reminders tidy-up** — confirmed by Amin (live). Version 2 complete; next: real use, then small fixes.
-- **V2.6 Follow-up as its own action + fewer sources** — built 1 Nov 2026, waiting for Amin.
+- ✅ **V2.6 Follow-up as its own action + fewer sources** — live; 0006 applied by Amin 1 Nov 2026.
   - Follow-up card: Set follow-up (none) or Done + Change. Done = `PATCH {next_due: null,
     done: true}`, logged "Follow-up done". Log interaction is a separate button under the
     card (and in the History heading); its sheet has type, note, when, status only.
   - Add lead has no follow-up section. Sources as above.
-- **V2.7 Today and Dashboard apart** (next) — Today (`/`, action list + lead on the right)
-  and a separate Dashboard page (numbers, leads by status, new this week); menu Today ·
-  Dashboard · Leads · Settings.
+- **V2.7 Today and Dashboard apart** — built 1 Nov 2026, waiting for Amin to confirm.
+  - Today (`/`, `src/views/today.js`): date, a one-line count, Overdue / Due today / No
+    follow-up scheduled / Coming up · next 7 days; Mac: list left, lead right. `?s=<list>`
+    scrolls to a list. `groupsOf()` lives here and is shared with the Dashboard.
+  - Dashboard (`/dashboard`, `src/views/dashboard.js`): six numbers (the follow-up ones open
+    Today at that list, Active → Leads, New this week scrolls), Leads by status as
+    horizontal bars (→ `/leads?status=`), Won / Lost totals, New this week cards. Mac: numbers
+    across, chart beside new-this-week; a card opens the lead beside the Leads table.
+  - Menu and tab bar: Today · Dashboard · Leads · Settings. Back from a lead says where
+    it was opened from.
   - `runReminders` loads all active leads (not only those with a date); `plan()` adds
     "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
     have no follow-up date yet." when that's all there is. Due-step reminders unchanged.

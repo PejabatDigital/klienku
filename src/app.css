@@ -37,27 +37,32 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .metric{ display:block; text-align:left; border:1px solid transparent; border-radius:14px; padding:10px 12px; font:500 13px/18px var(--font);
   text-decoration:none; cursor:pointer; background:var(--surface); border-color:var(--line); color:var(--text-muted); }
 .metric b{ display:block; font-size:24px; line-height:30px; font-weight:700; color:var(--text); }
-.metric:disabled{ cursor:default; }
+.metric.zero b{ opacity:.55; }
 .metric.m-overdue{ background:var(--overdue-soft); color:var(--overdue); border-color:transparent; }
 .metric.m-today{ background:var(--today-soft); color:var(--today); border-color:transparent; }
 .metric.m-none{ background:var(--none-soft); color:var(--none); border-color:transparent; }
 .metric.m-upcoming{ background:var(--upcoming-soft); color:var(--upcoming); border-color:transparent; }
 .metric.m-overdue b, .metric.m-today b, .metric.m-none b, .metric.m-upcoming b{ color:inherit; }
-.metric:disabled b{ opacity:.55; }
 .section .more{ float:right; text-transform:none; letter-spacing:0; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; }
 .section[id]{ scroll-margin-top:16px; }
 
-/* Leads by status (Mac) */
-.pipeline .label{ display:flex; justify-content:space-between; margin:0 0 8px; }
-.pipeline .label span{ text-transform:none; letter-spacing:0; font-weight:500; }
-.pipe{ display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; }
-.pipe-col{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 2px 4px; border-radius:10px; text-decoration:none; text-align:center; }
-.pipe-col:hover{ background:var(--subtle); }
-.pipe-col b{ font-size:17px; line-height:22px; }
-.pipe-col i{ display:flex; align-items:flex-end; width:100%; max-width:36px; height:36px; }
-.pipe-col i::before{ content:""; width:100%; height:max(3px, var(--h)); border-radius:4px 4px 2px 2px; background:var(--accent); opacity:.85; }
-.pipe-col.zero b{ color:#A8A49D; } .pipe-col.zero i::before{ background:var(--line); }
-.pipe-col span{ font-size:11px; line-height:14px; color:var(--text-muted); }
+.head-sub{ margin:4px 0 0; color:var(--text-muted); }
+
+/* Dashboard: leads by status as bars, new this week */
+.dash-grid{ display:grid; gap:4px; }
+.status-chart{ padding:14px 16px 10px; }
+.status-chart .label{ display:flex; justify-content:space-between; margin:0 0 6px; }
+.status-chart .label span{ text-transform:none; letter-spacing:0; font-weight:500; }
+.bar-row{ display:grid; grid-template-columns:128px 1fr 28px; align-items:center; gap:10px; padding:6px 4px; margin:0 -4px; border-radius:8px; text-decoration:none; font-size:14px; }
+.bar-row:hover{ background:var(--subtle); }
+.bar-row i{ height:10px; border-radius:5px; background:var(--subtle); overflow:hidden; }
+.bar-row i b{ display:block; height:100%; min-width:3px; border-radius:5px; background:var(--accent); }
+.bar-row em{ font-style:normal; font-weight:600; text-align:right; }
+.bar-row.zero{ color:var(--text-muted); } .bar-row.zero i b{ background:transparent; min-width:0; } .bar-row.zero em{ color:#A8A49D; }
+.bar-foot{ display:flex; gap:18px; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+.bar-foot a{ display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:500; text-decoration:none; color:var(--text-muted); }
+.bar-foot a:first-child .ic{ color:var(--won); }
+.none-note{ margin:0; color:var(--text-muted); }
 
 /* ── Client cards ── */
 .cards{ display:grid; gap:10px; }
@@ -334,17 +339,14 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   body.wide .form .topbar{ margin:-8px 0 4px; padding:8px 0; }
 
   /* Today: list and client side by side */
-  body.wide .view.v-dash{ padding:0; }
   .split{ display:grid; grid-template-columns:minmax(380px, 440px) 1fr; height:100dvh; }
-  /* Dashboard: numbers and leads by status across the top, then list and lead */
-  .dash{ display:grid; grid-template-rows:auto minmax(0, 1fr); height:100dvh; }
-  .dash .split{ height:auto; min-height:0; border-top:1px solid var(--line); }
-  .dash-top{ padding:24px 32px 18px; }
-  .dash-top .head{ margin:0 0 14px; }
-  .dash-row{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; align-items:end; }
-  .dash-top .metrics{ gap:6px; }
-  .dash-top .metric{ display:flex; align-items:baseline; gap:8px; padding:6px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .dash-top .metric b{ display:inline; font-size:20px; line-height:28px; }
+  body.wide .view.v-today{ padding:0; }
+  /* Dashboard: numbers across, then leads by status beside new this week */
+  .v-dash .metrics{ grid-template-columns:repeat(6, 1fr); gap:10px; }
+  .v-dash .dash-grid{ grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:24px; align-items:start; margin-top:20px; }
+  .v-dash .dash-grid .section{ margin-top:0; }
+  .v-dash .status-chart{ margin-top:0; }
+  .v-dash .dash-grid .cards{ grid-template-columns:1fr 1fr; }
   .listcol{ overflow-y:auto; padding:28px 24px 32px; border-right:1px solid var(--line); }
   .listcol .head{ margin-top:0; }
   .pane{ overflow-y:auto; padding:28px 40px 40px; background:var(--surface); }
