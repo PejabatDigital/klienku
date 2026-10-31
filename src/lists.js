@@ -20,7 +20,7 @@ export const CLOSED = ["won", "lost"];
 export const PROJECT_TYPES = ["Bathroom", "Kitchen", "Full renovation", "Extension", "Roofing",
   "Painting", "Plumbing / electrical", "Other"];
 
-export const SOURCES = ["WhatsApp", "Facebook", "Instagram", "Google", "Website", "Referral", "Walk-in", "Other"];
+export const SOURCES = ["WhatsApp", "Email", "Social media", "Other"];
 
 /* Offered when a lead is marked Lost (the reason is optional). */
 export const LOST_REASONS = ["No reply", "Too expensive", "Went with someone else", "Project postponed",

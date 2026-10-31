@@ -1,9 +1,9 @@
 /* Add lead (Figma 5) and Edit lead (Figma 9, with Delete → Figma 11). Only the name is
-   required; the rest can be filled in later. Status and follow-up are changed on the lead
+   required; the rest can be filled in later. Status and follow-up are set on the lead's
    page, not here. */
 import { api, updateClient } from "../api.js";
 import { PROJECT_TYPES, SOURCES } from "../lists.js";
-import { FOLLOW_UP_DAYS, confirmDialog, whenChips, wireWhen } from "../sheets.js";
+import { confirmDialog } from "../sheets.js";
 import { esc, gone, pills, problem, toast, wirePills } from "../ui.js";
 
 /* "15,000", "RM 15k" → 15000; empty → null; anything else → NaN. */
@@ -52,15 +52,11 @@ export function addView(root, params, { back, go }){
     <form class="form" novalidate>
       <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>New lead</b><button class="link strong">Save</button></nav>
       ${details({ source: "WhatsApp" })}
-      <p class="label">Next follow-up (optional)</p>
-      <div data-when>${whenChips(FOLLOW_UP_DAYS(), null)}</div>
-      <input class="note" name="next_step" placeholder="What to do (optional), e.g. Ask for photos" maxlength="200">
-      <p class="hint">Only the name is needed. Budget and notes can wait.</p>
+      <p class="hint">Only the name is needed. Budget and notes can wait. Set the follow-up on the lead's page after saving.</p>
       ${extras()}
       <button class="btn btn-primary btn-lg">Save lead</button>
     </form>`;
   const form = root.querySelector("form"), pick = wirePills(form);
-  const getDue = wireWhen(form.querySelector("[data-when]"));
   wireAutogrow(root);
   form.querySelector('[data-act="cancel"]').addEventListener("click", ()=>back("/"));
   form.querySelector("[name=name]").focus();
@@ -68,8 +64,6 @@ export function addView(root, params, { back, go }){
     e.preventDefault();
     const body = read(form, pick);
     if (!body) return;
-    const next_due = getDue();
-    if (next_due) Object.assign(body, { next_due, next_step: form.querySelector("[name=next_step]").value });
     form.querySelectorAll("button").forEach(b=>b.disabled = true);
     try {
       const { client } = await api("/clients", { method: "POST", body });

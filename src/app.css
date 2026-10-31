@@ -156,6 +156,7 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .next .btns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
 .next .btns .btn{ margin:0; border-radius:12px; }
 .next .btns.one{ grid-template-columns:1fr; }
+.log-btn{ margin-top:12px; border-radius:12px; }
 
 /* Lead page: status, details, general notes */
 .status-row{ margin-top:16px; }

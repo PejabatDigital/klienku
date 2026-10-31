@@ -161,14 +161,17 @@ Decisions (Amin, 31 Oct 2026):
   general notes (always visible, editable), created, last contacted, next follow-up date +
   follow-up note, activity log. No visible lead ID.
 - Project types: Bathroom, Kitchen, Full renovation, Extension, Roofing, Painting,
-  Plumbing / electrical, Other. Sources: WhatsApp, Facebook, Instagram, Google, Website,
-  Referral, Walk-in, Other.
+  Plumbing / electrical, Other. Sources: WhatsApp, Email, Social media, Other (changed
+  1 Nov 2026; `migrations/0006_sources.sql` moved Facebook/Instagram → Social media, the
+  rest → Other).
 - **Follow-up date is optional, with no default.** Active leads without one show under
   "No follow-up scheduled" (Dashboard, and counted in the morning summary).
 - Interaction log: type (WhatsApp, Call, Meeting, Site visit, Customer request, Quotation
   sent, Follow-up attempt, Other), date and time, description. Never overwritten.
 - **Drop** the automatic next-step suggestions and the "tries" counter (and their Settings).
-  Recording a contact = one sheet: what happened → status → next follow-up date + note.
+- **The follow-up is its own action** (Amin, 1 Nov 2026): set, changed or marked done only
+  with its buttons on the lead page (Set follow-up / Done / Change). Add lead and Log
+  interaction never touch it.
 - Claude designs the new screens in code, in the current KlienKu style (tokens below);
   Amin reviews on phone and Mac. The Figma stays the reference for look and feel.
 - Existing data moves across: Contacting → Contacted, Site visit → Site Visit, Quote sent →
@@ -227,6 +230,14 @@ Phases (one at a time, each confirmed by Amin):
   - Add lead: name, phone, location, type, source, next follow-up first; budget and notes
     after ("can wait").
 - ✅ **V2.5 Reminders tidy-up** — confirmed by Amin (live). Version 2 complete; next: real use, then small fixes.
+- **V2.6 Follow-up as its own action + fewer sources** — built 1 Nov 2026, waiting for Amin.
+  - Follow-up card: Set follow-up (none) or Done + Change. Done = `PATCH {next_due: null,
+    done: true}`, logged "Follow-up done". Log interaction is a separate button under the
+    card (and in the History heading); its sheet has type, note, when, status only.
+  - Add lead has no follow-up section. Sources as above.
+- **V2.7 Today and Dashboard apart** (next) — Today (`/`, action list + lead on the right)
+  and a separate Dashboard page (numbers, leads by status, new this week); menu Today ·
+  Dashboard · Leads · Settings.
   - `runReminders` loads all active leads (not only those with a date); `plan()` adds
     "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
     have no follow-up date yet." when that's all there is. Due-step reminders unchanged.

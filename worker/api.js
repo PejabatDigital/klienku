@@ -6,7 +6,8 @@
    GET    /api/clients                 every lead (active, won and lost) with last_contact, small enough to send whole
    POST   /api/clients                 add a lead (the follow-up is optional)
    GET    /api/clients/:id             one lead and its activity, newest first
-   PATCH  /api/clients/:id             edit details, change status ({stage, reason}), set or clear the follow-up ({next_due, next_step})
+   PATCH  /api/clients/:id             edit details, change status ({stage, reason}), set or clear the follow-up ({next_due, next_step};
+                                       {next_due: null, done: true} marks it done)
    POST   /api/clients/:id/interactions  log what happened ({type, text, at}), with the same status / follow-up changes as PATCH
    DELETE /api/clients/:id             remove for good (duplicates and mistakes)
    GET    /api/settings, PUT /api/settings   reminders
@@ -162,8 +163,11 @@ function progress(db, user, c, b, next, t){
     if (CLOSED.includes(next.stage)) bad("Won and Lost leads have no follow-up");
     const f = followUp(b);
     if (f.next_due!==next.next_due || f.next_step!==next.next_step){
+      // clearing it with {done: true} means it was done, not dropped
+      const line = f.next_due ? `Follow-up: ${dueText(f.next_due)}` + (f.next_step ? "\n" + f.next_step : "")
+        : b.done ? "Follow-up done" + (next.next_step ? "\n" + next.next_step : "") : "Follow-up removed";
       Object.assign(next, f);
-      notes.push(log(db, user, cid, "follow_up", f.next_due ? `Follow-up: ${dueText(f.next_due)}` + (f.next_step ? "\n" + f.next_step : "") : "Follow-up removed", t));
+      notes.push(log(db, user, cid, "follow_up", line, t));
     }
   }
   return notes;

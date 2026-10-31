@@ -1,5 +1,5 @@
-/* Lead page: WhatsApp / Call, status (any order), next follow-up with Log interaction,
-   details, general notes, and the history. Won and Lost leads show how they ended; changing the status back
+/* Lead page: WhatsApp / Call, status (any order), next follow-up (Set / Done / Change),
+   Log interaction, details, general notes, and the history. Won and Lost leads show how they ended; changing the status back
    makes them active again. */
 import { api, updateClient } from "../api.js";
 import { clock, dayMonth, dueLong, localDay, status } from "../dates.js";
@@ -23,13 +23,13 @@ function followUpCard(c){
     <p class="label">Next follow-up</p>
     <h2>No follow-up scheduled</h2>
     <p class="when">Set a date so this lead isn't forgotten.</p>
-    <div class="btns"><button class="btn btn-primary" data-act="log">Log interaction</button><button class="btn btn-white" data-act="follow">Set follow-up</button></div>
+    <div class="btns one"><button class="btn btn-primary" data-act="follow">Set follow-up</button></div>
   </div>`;
   return `<div class="next s-${status(c.next_due)}">
     <p class="label">Next follow-up</p>
     <h2>${esc(followUpText(c))}</h2>
     <p class="when">${icon("clock")}${esc(dueLong(c.next_due))}</p>
-    <div class="btns"><button class="btn btn-primary" data-act="log">Log interaction</button><button class="btn btn-white" data-act="follow">Change date</button></div>
+    <div class="btns"><button class="btn btn-primary" data-act="done">${icon("check")}Done</button><button class="btn btn-white" data-act="follow">Change</button></div>
   </div>`;
 }
 
@@ -39,7 +39,6 @@ function endedCard(c){
     <p class="label">${won ? "Won" : "Lost"}${c.closed_at ? " · " + dayMonth(localDay(c.closed_at)) : ""}</p>
     <h2>${icon(won ? "trophy" : "archive")}${won ? "Customer confirmed" : "Not proceeding"}</h2>
     ${c.close_reason ? `<p class="when">${esc(c.close_reason)}</p>` : ""}
-    <div class="btns one"><button class="btn btn-white" data-act="log">Log interaction</button></div>
   </div>`;
 }
 
@@ -93,7 +92,9 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
       ${c.project_type || c.area ? `<p>${esc([c.project_type, c.area].filter(Boolean).join(" · "))}</p>` : ""}
       ${c.phone ? `<p class="meta">${esc(c.phone)}</p>` : ""}
     </div>`;
-  const body = statusRow(c) + (isActive(c) ? followUpCard(c) : endedCard(c)) + facts(c, data.activity) + notesBox(c) + historyBox(data.activity);
+  const body = statusRow(c) + (isActive(c) ? followUpCard(c) : endedCard(c))
+    + `<button type="button" class="btn btn-white log-btn" data-act="log">${icon("chat")}Log interaction</button>`
+    + facts(c, data.activity) + notesBox(c) + historyBox(data.activity);
 
   root.innerHTML = wide ? `
     ${embedded ? (onClose ? `<nav class="topbar"><button class="back" data-act="close">${icon("x")}Close</button></nav>` : "") : `<nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button></nav>`}
@@ -108,6 +109,15 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
   act("back", ()=>back(from==="Dashboard" ? "/" : "/leads"));
   if (onClose) act("close", onClose);
   act("follow", ()=>followUpSheet(c, reload));
+  // the follow-up was done: clear it (Set follow-up is then offered)
+  act("done", async e=>{
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const { client } = await api(`/clients/${c.id}`, { method: "PATCH", body: { next_due: null, done: true } });
+      updateClient(client); toast("Follow-up done"); reload();
+    } catch(err){ toast(err.message, true); btn.disabled = false; }
+  });
   root.querySelectorAll('[data-act="log"]').forEach(b=>b.addEventListener("click", ()=>logSheet(c, reload)));
   act("notes", ()=>editNotes(root, c, reload));
 
