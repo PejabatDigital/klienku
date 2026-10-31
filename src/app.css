@@ -32,13 +32,32 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .hint{ margin:8px 4px 0; font-size:13px; line-height:18px; color:var(--text-muted); }
 .foot{ margin:32px 0 0; text-align:center; font-size:12px; color:var(--text-muted); opacity:.7; }
 
-/* ── Today stats ── */
-.stats{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
-.stat{ border-radius:14px; padding:10px 12px; font-size:13px; line-height:18px; }
-.stat b{ display:block; font-size:24px; line-height:30px; }
-.stat.s-overdue{ background:var(--overdue-soft); color:var(--overdue); }
-.stat.s-today{ background:var(--today-soft); color:var(--today); }
-.stat.s-upcoming{ background:var(--upcoming-soft); color:var(--upcoming); }
+/* ── Dashboard numbers ── */
+.metrics{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+.metric{ display:block; text-align:left; border:1px solid transparent; border-radius:14px; padding:10px 12px; font:500 13px/18px var(--font);
+  text-decoration:none; cursor:pointer; background:var(--surface); border-color:var(--line); color:var(--text-muted); }
+.metric b{ display:block; font-size:24px; line-height:30px; font-weight:700; color:var(--text); }
+.metric:disabled{ cursor:default; }
+.metric.m-overdue{ background:var(--overdue-soft); color:var(--overdue); border-color:transparent; }
+.metric.m-today{ background:var(--today-soft); color:var(--today); border-color:transparent; }
+.metric.m-none{ background:var(--none-soft); color:var(--none); border-color:transparent; }
+.metric.m-upcoming{ background:var(--upcoming-soft); color:var(--upcoming); border-color:transparent; }
+.metric.m-overdue b, .metric.m-today b, .metric.m-none b, .metric.m-upcoming b{ color:inherit; }
+.metric:disabled b{ opacity:.55; }
+.section .more{ float:right; text-transform:none; letter-spacing:0; font-size:13px; font-weight:600; color:var(--accent); text-decoration:none; }
+.section[id]{ scroll-margin-top:16px; }
+
+/* Leads by status (Mac) */
+.pipeline .label{ display:flex; justify-content:space-between; margin:0 0 8px; }
+.pipeline .label span{ text-transform:none; letter-spacing:0; font-weight:500; }
+.pipe{ display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; }
+.pipe-col{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 2px 4px; border-radius:10px; text-decoration:none; text-align:center; }
+.pipe-col:hover{ background:var(--subtle); }
+.pipe-col b{ font-size:17px; line-height:22px; }
+.pipe-col i{ display:flex; align-items:flex-end; width:100%; max-width:36px; height:36px; }
+.pipe-col i::before{ content:""; width:100%; height:max(3px, var(--h)); border-radius:4px 4px 2px 2px; background:var(--accent); opacity:.85; }
+.pipe-col.zero b{ color:#A8A49D; } .pipe-col.zero i::before{ background:var(--line); }
+.pipe-col span{ font-size:11px; line-height:14px; color:var(--text-muted); }
 
 /* ── Client cards ── */
 .cards{ display:grid; gap:10px; }
@@ -314,8 +333,17 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   body.wide .form .topbar{ margin:-8px 0 4px; padding:8px 0; }
 
   /* Today: list and client side by side */
-  body.wide .view.v-today{ padding:0; }
+  body.wide .view.v-dash{ padding:0; }
   .split{ display:grid; grid-template-columns:minmax(380px, 440px) 1fr; height:100dvh; }
+  /* Dashboard: numbers and leads by status across the top, then list and lead */
+  .dash{ display:grid; grid-template-rows:auto minmax(0, 1fr); height:100dvh; }
+  .dash .split{ height:auto; min-height:0; border-top:1px solid var(--line); }
+  .dash-top{ padding:24px 32px 18px; }
+  .dash-top .head{ margin:0 0 14px; }
+  .dash-row{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; align-items:end; }
+  .dash-top .metrics{ gap:6px; }
+  .dash-top .metric{ display:flex; align-items:baseline; gap:8px; padding:6px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dash-top .metric b{ display:inline; font-size:20px; line-height:28px; }
   .listcol{ overflow-y:auto; padding:28px 24px 32px; border-right:1px solid var(--line); }
   .listcol .head{ margin-top:0; }
   .pane{ overflow-y:auto; padding:28px 40px 40px; background:var(--surface); }

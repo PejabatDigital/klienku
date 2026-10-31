@@ -70,7 +70,7 @@ function historyBox(activity){
   </div>`;
 }
 
-/* The lead page. `embedded` puts it beside the Today list on wide screens (no Back);
+/* The lead page. `embedded` puts it beside the Dashboard list on wide screens (no Back);
    `onChange` runs after anything is saved, so that list can refresh. */
 export async function leadView(root, { id }, { back, go }, { embedded = false, onChange } = {}){
   root.innerHTML = `<div class="loading">Loading…</div>`;
@@ -83,7 +83,7 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
   const c = data.client, wa = whatsapp(c.phone), wide = isWide();
   updateClient(c);
   const reload = () => { leadView(root, { id }, { back, go }, { embedded, onChange }); if (onChange) onChange(); };
-  const from = history.state && history.state.from==="/" ? "Today" : "Leads";
+  const from = history.state && history.state.from==="/" ? "Dashboard" : "Leads";
 
   const contact = (wa ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon("chat")}WhatsApp</a>` : "")
     + (c.phone ? `<a class="btn btn-white" href="tel:${esc(c.phone.replace(/[^\d+]/g, ""))}">${icon("phone")}Call</a>` : "");
@@ -104,7 +104,7 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
     ${body}`;
 
   const act = (name, fn) => { const b = root.querySelector(`[data-act="${name}"]`); if (b) b.addEventListener("click", fn); };
-  act("back", ()=>back(from==="Today" ? "/" : "/leads"));
+  act("back", ()=>back(from==="Dashboard" ? "/" : "/leads"));
   act("follow", ()=>followUpSheet(c, reload));
   root.querySelectorAll('[data-act="log"]').forEach(b=>b.addEventListener("click", ()=>logSheet(c, reload)));
   act("notes", ()=>editNotes(root, c, reload));

@@ -195,7 +195,7 @@ Phases (one at a time, each confirmed by Amin):
     preselects WhatsApp as source, follow-up optional.
   - Today already lists "No follow-up scheduled" (between Today and Coming up) so undated
     leads aren't missed before V2.3. Colour for "no follow-up": `--none` #9A6F0A (mustard).
-- **V2.2 Log interaction + follow-up** — built 1 Nov 2026, waiting for Amin to confirm.
+- ✅ **V2.2 Log interaction + follow-up** — confirmed by Amin 1 Nov 2026 (live).
   - `POST /api/clients/:id/interactions` `{type, text, at, stage?, reason?, next_due?,
     next_step?}`: one history row (kind `interaction`, text = type, then the description;
     `at` may be earlier, not in the future), plus the same status / follow-up changes as
@@ -207,8 +207,14 @@ Phases (one at a time, each confirmed by Amin):
   - Lead page: Log interaction in the follow-up card (and Won/Lost card) and the History
     heading; history shows date + time; interactions in accent, status/follow-up lines muted.
     The download's history lines include the time.
-- **V2.3 Dashboard** — Today becomes the Dashboard: Active, Overdue, Due today, Upcoming,
-  New this week; action list; No follow-up scheduled; leads by status (Mac).
+- **V2.3 Dashboard** — built 1 Nov 2026, waiting for Amin to confirm.
+  - "Today" is now **Dashboard** (path `/`, `src/views/dashboard.js`, sidebar/tab bar,
+    Back label). Numbers: Overdue, Due today, No follow-up, Upcoming (all future), Active
+    leads (→ Leads), New this week (since Monday); tapping one jumps to its list.
+  - Lists: Overdue, Due today, No follow-up scheduled, Coming up · next 7 days (+N later →
+    Leads), New this week. Mac: numbers and "Leads by status" (8 active statuses as small
+    bars, Won/Lost totals) across the top, list left, lead right. Phone has no status bars.
+  - `/leads?status=<key>` opens Leads filtered to that status (used by the status bars).
 - **V2.4 All Leads** — Mac table with filters (status, project type, source, follow-up),
   lead opens in a side panel; phone cards; Add lead in under 30 seconds.
 - **V2.5 Reminders tidy-up** — summary counts leads with no follow-up; email summary only

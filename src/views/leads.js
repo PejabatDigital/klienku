@@ -95,6 +95,14 @@ function drawList(root, clients){
 }
 
 export async function leadsView(root, params, { go }){
+  // /leads?status=<key> (from the Dashboard): show that status
+  const asked = new URLSearchParams(location.search).get("status");
+  if (asked){
+    if (ACTIVE_STATUSES.some(s=>s.key===asked)) Object.assign(view, { tab: "active", stage: asked, q: "" });
+    else if (asked==="won" || asked==="lost") Object.assign(view, { tab: asked, stage: "all", q: "" });
+    keep();
+    history.replaceState(history.state, "", "/leads");
+  }
   const search = `<label class="search">${icon("search")}<input type="search" placeholder="Search name, phone or project" value="${esc(view.q)}" autocomplete="off"></label>`;
   root.innerHTML = isWide() ? `
     <header class="head row"><div><h1>Leads</h1><span class="total"></span></div>${search}</header>
