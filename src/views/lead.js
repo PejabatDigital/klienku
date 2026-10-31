@@ -70,19 +70,20 @@ function historyBox(activity){
   </div>`;
 }
 
-/* The lead page. `embedded` puts it beside the Dashboard list on wide screens (no Back);
-   `onChange` runs after anything is saved, so that list can refresh. */
-export async function leadView(root, { id }, { back, go }, { embedded = false, onChange } = {}){
+/* The lead page. `embedded` puts it beside the Dashboard list or the Leads table on wide
+   screens (no Back; a Close button when `onClose` is given); `onChange` runs after anything
+   is saved, so that list can refresh. */
+export async function leadView(root, { id }, { back, go }, { embedded = false, onChange, onClose } = {}){
   root.innerHTML = `<div class="loading">Loading…</div>`;
   let data;
   try { data = await api(`/clients/${id}`); }
   catch(e){
-    if (e.status===404) gone(root); else problem(root, e, ()=>leadView(root, { id }, { back, go }, { embedded, onChange }));
+    if (e.status===404) gone(root); else problem(root, e, ()=>leadView(root, { id }, { back, go }, { embedded, onChange, onClose }));
     return;
   }
   const c = data.client, wa = whatsapp(c.phone), wide = isWide();
   updateClient(c);
-  const reload = () => { leadView(root, { id }, { back, go }, { embedded, onChange }); if (onChange) onChange(); };
+  const reload = () => { leadView(root, { id }, { back, go }, { embedded, onChange, onClose }); if (onChange) onChange(); };
   const from = history.state && history.state.from==="/" ? "Dashboard" : "Leads";
 
   const contact = (wa ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon("chat")}WhatsApp</a>` : "")
@@ -95,7 +96,7 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
   const body = statusRow(c) + (isActive(c) ? followUpCard(c) : endedCard(c)) + facts(c, data.activity) + notesBox(c) + historyBox(data.activity);
 
   root.innerHTML = wide ? `
-    ${embedded ? "" : `<nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button></nav>`}
+    ${embedded ? (onClose ? `<nav class="topbar"><button class="back" data-act="close">${icon("x")}Close</button></nav>` : "") : `<nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button></nav>`}
     <header class="who wide">${who}<div class="who-actions">${contact}<a class="btn btn-white" href="/leads/${c.id}/edit" data-link>Edit</a></div></header>
     ${body}` : `
     <nav class="topbar"><button class="back" data-act="back">${icon("back")}${from}</button><a class="link" href="/leads/${c.id}/edit" data-link>Edit</a></nav>
@@ -105,6 +106,7 @@ export async function leadView(root, { id }, { back, go }, { embedded = false, o
 
   const act = (name, fn) => { const b = root.querySelector(`[data-act="${name}"]`); if (b) b.addEventListener("click", fn); };
   act("back", ()=>back(from==="Dashboard" ? "/" : "/leads"));
+  if (onClose) act("close", onClose);
   act("follow", ()=>followUpSheet(c, reload));
   root.querySelectorAll('[data-act="log"]').forEach(b=>b.addEventListener("click", ()=>logSheet(c, reload)));
   act("notes", ()=>editNotes(root, c, reload));

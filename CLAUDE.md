@@ -207,7 +207,7 @@ Phases (one at a time, each confirmed by Amin):
   - Lead page: Log interaction in the follow-up card (and Won/Lost card) and the History
     heading; history shows date + time; interactions in accent, status/follow-up lines muted.
     The download's history lines include the time.
-- **V2.3 Dashboard** — built 1 Nov 2026, waiting for Amin to confirm.
+- ✅ **V2.3 Dashboard** — confirmed by Amin 1 Nov 2026 (live).
   - "Today" is now **Dashboard** (path `/`, `src/views/dashboard.js`, sidebar/tab bar,
     Back label). Numbers: Overdue, Due today, No follow-up, Upcoming (all future), Active
     leads (→ Leads), New this week (since Monday); tapping one jumps to its list.
@@ -215,8 +215,17 @@ Phases (one at a time, each confirmed by Amin):
     Leads), New this week. Mac: numbers and "Leads by status" (8 active statuses as small
     bars, Won/Lost totals) across the top, list left, lead right. Phone has no status bars.
   - `/leads?status=<key>` opens Leads filtered to that status (used by the status bars).
-- **V2.4 All Leads** — Mac table with filters (status, project type, source, follow-up),
-  lead opens in a side panel; phone cards; Add lead in under 30 seconds.
+- **V2.4 All Leads** — built 1 Nov 2026, waiting for Amin to confirm.
+  - Mac table (`src/views/leads.js`): filters Status, Project, Source, Follow-up (Overdue,
+    Due today, Next 7 days, Later, No follow-up) with Clear filters and "Showing N of M";
+    sorts Follow-up date, Recently added, Oldest first, Last contacted, Name. Columns: Name,
+    Project, Status, Source, Budget, Next follow-up, What to do, Last contacted (Won/Lost:
+    Reason, Closed). Filters are kept for the session; the phone ignores all but status.
+  - A row opens the lead in a panel on the right (`?c=<id>`, `leadView` with `onClose`):
+    Close, Escape or clicking the row again closes it. With it open, `.opt` columns hide;
+    under 1280 px Project hides too.
+  - Add lead: name, phone, location, type, source, next follow-up first; budget and notes
+    after ("can wait").
 - **V2.5 Reminders tidy-up** — summary counts leads with no follow-up; email summary only
   if Amin asks.
 

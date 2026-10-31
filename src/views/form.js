@@ -24,7 +24,9 @@ const details = (c = {}) => `
   <p class="label">Project type</p>
   ${pills("project_type", PROJECT_TYPES, c.project_type)}
   <p class="label">Lead source</p>
-  ${pills("source", SOURCES, c.source)}
+  ${pills("source", SOURCES, c.source)}`;
+/* Can wait until later: budget and general notes. */
+const extras = (c = {}) => `
   <p class="label">Estimated budget</p>
   <div class="group"><label class="gfield money"><span>RM</span><input name="budget" inputmode="decimal" value="${c.budget==null ? "" : c.budget.toLocaleString("en-MY")}" placeholder="e.g. 15,000" maxlength="20" autocomplete="off"></label></div>
   <p class="label">General notes</p>
@@ -53,6 +55,8 @@ export function addView(root, params, { back, go }){
       <p class="label">Next follow-up (optional)</p>
       <div data-when>${whenChips(FOLLOW_UP_DAYS(), null)}</div>
       <input class="note" name="next_step" placeholder="What to do (optional), e.g. Ask for photos" maxlength="200">
+      <p class="hint">Only the name is needed. Budget and notes can wait.</p>
+      ${extras()}
       <button class="btn btn-primary btn-lg">Save lead</button>
     </form>`;
   const form = root.querySelector("form"), pick = wirePills(form);
@@ -83,7 +87,7 @@ export async function editView(root, { id }, { back, go }){
   root.innerHTML = `
     <form class="form" novalidate>
       <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>Edit lead</b><button class="link strong">Save</button></nav>
-      ${details(c)}
+      ${details(c)}${extras(c)}
       <p class="hint">Change the status and the next follow-up on the lead's page.</p>
       <p class="label">Danger zone</p>
       <button type="button" class="group danger-row" data-act="delete"><b>Delete lead</b>
