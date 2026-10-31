@@ -1,32 +1,47 @@
-/* Add client (Figma 5) and Edit client (Figma 9, with Delete → Figma 11). */
+/* Add lead (Figma 5) and Edit lead (Figma 9, with Delete → Figma 11). Only the name is
+   required; the rest can be filled in later. Status and follow-up are changed on the lead
+   page, not here. */
 import { api, updateClient } from "../api.js";
-import { addDays, timeOf, today } from "../dates.js";
-import { STAGES, isOpen } from "../flow.js";
-import { confirmDialog, whenChips, wireWhen } from "../sheets.js";
+import { PROJECT_TYPES, SOURCES } from "../lists.js";
+import { FOLLOW_UP_DAYS, confirmDialog, whenChips, wireWhen } from "../sheets.js";
 import { esc, gone, problem, toast } from "../ui.js";
 
-const FIRST = [
-  { label: "Reply / contact", step: "Reply to first message" },
-  { label: "Call", step: "Call" },
-  { label: "Site visit", step: "Book site visit" },
-  { label: "Other", step: "" },
-];
+/* Pills where one (or none) can be chosen; tapping the chosen one again unchooses it. */
+const pills = (name, list, value) => `<div class="chips pick-one" data-pills="${name}">${list.map(v=>
+  `<button type="button" class="pill${v===value ? " on" : ""}" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
+function wirePills(root){
+  root.querySelectorAll("[data-pills]").forEach(group=>group.addEventListener("click", e=>{
+    const b = e.target.closest("[data-v]");
+    if (!b) return;
+    const on = !b.classList.contains("on");
+    group.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on", on && x===b));
+  }));
+  return name => { const on = root.querySelector(`[data-pills="${name}"] .on`); return on ? on.dataset.v : ""; };
+}
 
-/* "Later today": a couple of hours from now, on the hour (tomorrow morning if it's late). */
-function laterToday(){
-  const d = new Date(); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 2);
-  if (d.getHours() >= 22 || d.getDate()!==new Date().getDate()) return addDays(1) + "T09:00";
-  return today() + "T" + String(d.getHours()).padStart(2, "0") + ":00";
+/* "15,000", "RM 15k" → 15000; empty → null; anything else → NaN. */
+function ringgit(v){
+  const t = v.trim().toLowerCase().replace(/^rm\s*/, "").replace(/,/g, "");
+  if (!t) return null;
+  const m = /^(\d+(?:\.\d+)?)(k)?$/.exec(t);
+  return m ? Math.round(Number(m[1]) * (m[2] ? 1000 : 1)) : NaN;
 }
 
 const details = (c = {}) => `
-  <p class="label">Client</p>
+  <p class="label">Lead</p>
   <div class="group">
     <label class="gfield"><span>Name</span><input name="name" value="${esc(c.name)}" required maxlength="120" autocomplete="off" autocapitalize="words"></label>
     <label class="gfield"><span>Phone</span><input name="phone" type="tel" value="${esc(c.phone)}" maxlength="40" placeholder="012-345 6789" autocomplete="off"></label>
-    <label class="gfield"><span>What they need</span><textarea name="need" rows="2" maxlength="500" placeholder="e.g. Kitchen renovation">${esc(c.need)}</textarea></label>
-    <label class="gfield"><span>Area (optional)</span><input name="area" value="${esc(c.area)}" maxlength="120" placeholder="e.g. Shah Alam" autocomplete="off"></label>
-  </div>`;
+    <label class="gfield"><span>Location</span><input name="area" value="${esc(c.area)}" maxlength="120" placeholder="e.g. Wangsa Maju" autocomplete="off"></label>
+  </div>
+  <p class="label">Project type</p>
+  ${pills("project_type", PROJECT_TYPES, c.project_type)}
+  <p class="label">Lead source</p>
+  ${pills("source", SOURCES, c.source)}
+  <p class="label">Estimated budget</p>
+  <div class="group"><label class="gfield money"><span>RM</span><input name="budget" inputmode="decimal" value="${c.budget==null ? "" : c.budget.toLocaleString("en-MY")}" placeholder="e.g. 15,000" maxlength="20" autocomplete="off"></label></div>
+  <p class="label">General notes</p>
+  <textarea class="notes" name="notes" rows="3" maxlength="5000" placeholder="House type, sizes, what they want, timing…">${esc(c.notes)}</textarea>`;
 
 function wireAutogrow(root){
   root.querySelectorAll("textarea").forEach(t=>{
@@ -35,42 +50,40 @@ function wireAutogrow(root){
   });
 }
 
+/* The lead details from the form, or null (with a message) when something needs fixing. */
+function read(form, pick){
+  const f = Object.fromEntries(new FormData(form)), budget = ringgit(f.budget);
+  if (!f.name.trim()){ toast("Please enter a name.", true); return null; }
+  if (Number.isNaN(budget)){ toast("Please write the budget as a number, e.g. 15000.", true); return null; }
+  return { name: f.name, phone: f.phone, area: f.area, project_type: pick("project_type"), source: pick("source"), budget, notes: f.notes };
+}
+
 export function addView(root, params, { back, go }){
   root.innerHTML = `
     <form class="form" novalidate>
-      <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>New client</b><button class="link strong">Save</button></nav>
-      ${details()}
-      <p class="label">First step</p>
-      <div class="chips first">${FIRST.map((f, i)=>`<button type="button" class="pill${i===0 ? " on" : ""}" data-step="${esc(f.step)}">${f.label}</button>`).join("")}</div>
-      <input class="note other" name="other" placeholder="What's the first step?" maxlength="120" hidden>
-      <p class="label">Due</p>
-      <div data-when>${whenChips([{ label: "Now", due: today() }, { label: "Later today", due: laterToday() }, { label: "Tomorrow", due: addDays(1) }], 0)}</div>
-      <p class="label">Notes (optional)</p>
-      <textarea class="notes" name="notes" rows="3" maxlength="5000" placeholder="Anything worth remembering…"></textarea>
-      <button class="btn btn-primary btn-lg">Save client</button>
+      <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>New lead</b><button class="link strong">Save</button></nav>
+      ${details({ source: "WhatsApp" })}
+      <p class="label">Next follow-up (optional)</p>
+      <div data-when>${whenChips(FOLLOW_UP_DAYS(), null)}</div>
+      <input class="note" name="next_step" placeholder="What to do (optional), e.g. Ask for photos" maxlength="200">
+      <button class="btn btn-primary btn-lg">Save lead</button>
     </form>`;
-  const form = root.querySelector("form"), other = form.querySelector("[name=other]");
+  const form = root.querySelector("form"), pick = wirePills(form);
   const getDue = wireWhen(form.querySelector("[data-when]"));
   wireAutogrow(root);
-  form.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click", ()=>{
-    form.querySelectorAll("[data-step]").forEach(x=>x.classList.toggle("on", x===b));
-    other.hidden = b.dataset.step!==""; if (!other.hidden) other.focus();
-  }));
   form.querySelector('[data-act="cancel"]').addEventListener("click", ()=>back("/"));
   form.querySelector("[name=name]").focus();
   form.addEventListener("submit", async e=>{
     e.preventDefault();
-    const f = Object.fromEntries(new FormData(form));
-    const chosen = form.querySelector("[data-step].on").dataset.step;
-    const next_step = chosen || f.other.trim(), next_due = getDue();
-    if (!f.name.trim()) return toast("Please enter a name.", true);
-    if (!next_step) return toast("Please write the first step.", true);
-    if (!next_due) return toast("Please choose when it's due.", true);
+    const body = read(form, pick);
+    if (!body) return;
+    const next_due = getDue();
+    if (next_due) Object.assign(body, { next_due, next_step: form.querySelector("[name=next_step]").value });
     form.querySelectorAll("button").forEach(b=>b.disabled = true);
     try {
-      const { client } = await api("/clients", { method: "POST", body: { name: f.name, phone: f.phone, need: f.need, area: f.area, notes: f.notes, next_step, next_due } });
-      updateClient(client); toast("Client added");
-      go(`/clients/${client.id}`, { replace: true });
+      const { client } = await api("/clients", { method: "POST", body });
+      updateClient(client); toast("Lead added");
+      go(`/leads/${client.id}`, { replace: true });
     } catch(err){ toast(err.message, true); form.querySelectorAll("button").forEach(b=>b.disabled = false); }
   });
 }
@@ -80,43 +93,31 @@ export async function editView(root, { id }, { back, go }){
   let c;
   try { c = (await api(`/clients/${id}`)).client; }
   catch(e){ if (e.status===404) gone(root); else problem(root, e, ()=>editView(root, { id }, { back, go })); return; }
-  const open = isOpen(c), due = c.next_due || "";
   root.innerHTML = `
     <form class="form" novalidate>
-      <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>Edit client</b><button class="link strong">Save</button></nav>
+      <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>Edit lead</b><button class="link strong">Save</button></nav>
       ${details(c)}
-      ${open ? `<p class="label">Progress</p>
-      <div class="group">
-        <label class="gfield"><span>Stage</span><select name="stage">${STAGES.map(s=>`<option value="${s.key}"${s.key===c.stage ? " selected" : ""}>${s.label}</option>`).join("")}</select></label>
-        <label class="gfield"><span>Next step</span><input name="next_step" value="${esc(c.next_step)}" maxlength="120"></label>
-        <div class="gfield two"><label><span>Due</span><input type="date" name="date" value="${due.slice(0, 10)}"></label><label><span>Time (optional)</span><input type="time" name="time" value="${timeOf(due)}"></label></div>
-      </div>
-      <p class="hint">Usually these update on their own when you tap Mark done. Change them here only to fix a mistake.</p>` : ""}
+      <p class="hint">Change the status and the next follow-up on the lead's page.</p>
       <p class="label">Danger zone</p>
-      <button type="button" class="group danger-row" data-act="delete"><b>Delete client</b>
-        <span>For duplicates or mistakes only. To finish with a client, use Close instead so the history is kept.</span></button>
+      <button type="button" class="group danger-row" data-act="delete"><b>Delete lead</b>
+        <span>For duplicates or mistakes only. To finish with a lead, set its status to Won or Lost so the history is kept.</span></button>
     </form>`;
-  const form = root.querySelector("form");
+  const form = root.querySelector("form"), pick = wirePills(form);
   wireAutogrow(root);
-  form.querySelector('[data-act="cancel"]').addEventListener("click", ()=>back(`/clients/${id}`));
+  form.querySelector('[data-act="cancel"]').addEventListener("click", ()=>back(`/leads/${id}`));
   form.querySelector('[data-act="delete"]').addEventListener("click", async ()=>{
-    if (!(await confirmDialog({ title: `Delete ${c.name}?`, text: "This removes the client and all their notes. It can't be undone." }))) return;
-    try { await api(`/clients/${id}`, { method: "DELETE" }); updateClient(c, true); toast("Deleted"); go("/clients", { replace: true }); }
+    if (!(await confirmDialog({ title: `Delete ${c.name}?`, text: "This removes the lead and all its history. It can't be undone." }))) return;
+    try { await api(`/clients/${id}`, { method: "DELETE" }); updateClient(c, true); toast("Deleted"); go("/leads", { replace: true }); }
     catch(err){ toast(err.message, true); }
   });
   form.addEventListener("submit", async e=>{
     e.preventDefault();
-    const f = Object.fromEntries(new FormData(form));
-    if (!f.name.trim()) return toast("Please enter a name.", true);
-    const body = { name: f.name, phone: f.phone, need: f.need, area: f.area };
-    if (open){
-      if (!f.next_step.trim() || !f.date) return toast("Please fill in the next step and its date.", true);
-      Object.assign(body, { stage: f.stage, next_step: f.next_step, next_due: f.date + (f.time ? "T" + f.time : "") });
-    }
+    const body = read(form, pick);
+    if (!body) return;
     form.querySelectorAll("button").forEach(b=>b.disabled = true);
     try {
       const { client } = await api(`/clients/${id}`, { method: "PATCH", body });
-      updateClient(client); toast("Saved"); back(`/clients/${id}`);
+      updateClient(client); toast("Saved"); back(`/leads/${id}`);
     } catch(err){ toast(err.message, true); form.querySelectorAll("button").forEach(b=>b.disabled = false); }
   });
 }

@@ -1,6 +1,6 @@
 # KlienKu
 
-Who to follow up with today, so no client is ever forgotten. A Kasah Kod app.
+Who to follow up with today, so no lead is ever forgotten. A Kasah Kod app.
 
 Live at https://klienku.kasahkod.cc — an installable web app (Add to Home Screen) with a
 Cloudflare Worker behind it.
@@ -25,7 +25,7 @@ Database changes (`migrations/`) must be applied before the code that needs them
 ## Backups
 - **Automatic:** Cloudflare D1 Time Travel keeps restore points for every minute of the
   last 7 days (Workers free plan; 30 days on paid). Nothing to set up.
-- **Your own copy:** Settings → Download my data (a CSV of every client and its history).
+- **Your own copy:** Settings → Download my data (a CSV of every lead and its history).
 
 To roll the live database back to a moment in time (this replaces everything after it):
 ```bash

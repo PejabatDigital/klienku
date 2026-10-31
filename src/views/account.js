@@ -61,7 +61,7 @@ export function passwordSheet(){
 export function downloadSheet(){
   const sheet = openSheet(`
     <h2>Download my data</h2>
-    <p class="sub">All your clients and their history, as a spreadsheet file you can open in Numbers, Excel or Google Sheets.</p>
+    <p class="sub">All your leads and their history, as a spreadsheet file you can open in Numbers, Excel or Google Sheets.</p>
     <button class="btn btn-primary btn-lg" data-act="save" disabled>Preparing…</button>
     <button type="button" class="link center" data-close>Cancel</button>`);
   const btn = sheet.querySelector('[data-act="save"]');
@@ -71,7 +71,7 @@ export function downloadSheet(){
       const r = await fetch("/api/export");
       if (r.status===401) return location.replace("/signin");
       if (!r.ok) throw new Error();
-      const name = (/filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "") || [])[1] || "klienku-clients.csv";
+      const name = (/filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "") || [])[1] || "klienku-leads.csv";
       file = new File([await r.blob()], name, { type: "text/csv" });
       btn.disabled = false; btn.textContent = "Save file";
     } catch(e){ btn.textContent = navigator.onLine ? "Couldn't prepare it. Try again later." : "You're offline"; }
@@ -92,7 +92,7 @@ export function downloadSheet(){
 export function deleteSheet(email){
   const sheet = openSheet(`
     <h2>Delete my account</h2>
-    <p class="sub">This deletes your account (${esc(email)}) and everything in it for good: all your clients, their
+    <p class="sub">This deletes your account (${esc(email)}) and everything in it for good: all your leads, their
       history and your settings. Reminders stop on every device. It can't be undone.</p>
     <p class="sub">Want a copy first? Use Download my data.</p>
     <label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE"></label>

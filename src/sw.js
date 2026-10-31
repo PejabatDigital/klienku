@@ -27,7 +27,7 @@ self.addEventListener("fetch", e=>{
   if (req.method!=="GET" || url.origin!==location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // API calls always go to the network
   if (req.mode==="navigate"){
-    // the app's screens (/, /clients/…, /settings) open from cache
+    // the app's screens (/, /leads/…, /settings) open from cache
     const page = PAGES[url.pathname.replace(/(\.html|\/)$/, "")];
     e.respondWith(page
       ? fetch(req).catch(()=>caches.match(page, {cacheName:CACHE}).then(plain))

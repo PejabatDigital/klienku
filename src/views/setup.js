@@ -23,7 +23,7 @@ export async function maybeShowSetup(){
     ? `<span><b>Notifications</b><small>First add KlienKu to your Home Screen: Share → Add to Home Screen, then open it from there.</small></span>`
     : state==="blocked"
     ? `<span><b>Notifications</b><small>Turned off. ${isIOS() ? "You can turn them on in iPhone Settings → Notifications → KlienKu." : "You can allow them for this site in your browser settings."}</small></span>`
-    : `<span><b>Notifications</b><small>Alert me when a step is due</small></span><button type="button" class="allow" data-act="allow">Allow</button>`;
+    : `<span><b>Notifications</b><small>Alert me when a follow-up is due</small></span><button type="button" class="allow" data-act="allow">Allow</button>`;
 
   const layer = document.createElement("div");
   layer.className = "setup";

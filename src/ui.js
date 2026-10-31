@@ -1,8 +1,8 @@
-/* Small building blocks shared by the screens: escaping, icons, client cards, toasts. */
+/* Small building blocks shared by the screens: escaping, icons, lead cards, toasts. */
 import { dueShort, status } from "./dates.js";
-import { stageLabel, stepLabel } from "./flow.js";
+import { followUpText, isActive, statusLabel } from "./flow.js";
 
-/* Mac and wide screens: sidebar layout, list and detail side by side, clients as a table. */
+/* Mac and wide screens: sidebar layout, list and detail side by side, leads as a table. */
 export const isWide = () => matchMedia("(min-width: 1024px)").matches;
 
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c=>({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -28,18 +28,21 @@ const PATHS = {
 };
 export const icon = (name, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name]}</svg>`;
 
-/* A client card for Today and the Clients list. */
+/* The card colour: overdue | today | upcoming | none (no follow-up), or won | closed. */
+export const cardState = c => !isActive(c) ? (c.stage==="won" ? "won" : "closed") : c.next_due ? status(c.next_due) : "none";
+
+/* A lead card for Today and the Leads list. */
 export function card(c){
-  const open = !!c.next_due, s = open ? status(c.next_due) : c.stage==="won" ? "won" : "closed";
-  const sub = [c.need, c.area].filter(Boolean).join(" · ");
-  const right = open ? dueShort(c.next_due) : (c.stage==="won" ? "Won" : c.outcome==="ended" ? "Ended" : "Lost");
-  const step = open
-    ? `<span class="chip chip-${s}">${icon("clock")}${esc(stepLabel(c))}</span><span class="chip chip-stage">${esc(stageLabel(c.stage))}</span>`
+  const s = cardState(c), active = isActive(c);
+  const sub = [c.project_type, c.area].filter(Boolean).join(" · ");
+  const right = !active ? statusLabel(c.stage) : c.next_due ? dueShort(c.next_due) : "No follow-up";
+  const chips = active
+    ? (c.next_due ? `<span class="chip chip-${s}">${icon("clock")}${esc(followUpText(c))}</span>` : "") + `<span class="chip chip-stage">${esc(statusLabel(c.stage))}</span>`
     : c.close_reason ? `<span class="chip chip-stage">${esc(c.close_reason)}</span>` : "";
-  return `<a class="ccard s-${s}" href="/clients/${c.id}" data-link>
+  return `<a class="ccard s-${s}" href="/leads/${c.id}" data-link>
     <div class="ccard-top"><b>${esc(c.name)}</b><span class="due">${esc(right)}</span></div>
     ${sub ? `<div class="ccard-sub">${esc(sub)}</div>` : ""}
-    ${step ? `<div class="ccard-chips">${step}</div>` : ""}
+    ${chips ? `<div class="ccard-chips">${chips}</div>` : ""}
   </a>`;
 }
 
@@ -52,9 +55,9 @@ export function problem(root, e, retry){
   root.querySelector("[data-retry]").addEventListener("click", retry);
 }
 
-/* A client that's no longer there (deleted, or a wrong link). */
-export const gone = root => { root.innerHTML = `<div class="empty small">${icon("search_off")}<h2>Client not found</h2>
-  <p>This client may have been deleted.</p><a class="btn btn-white" href="/clients" data-link>All clients</a></div>`; };
+/* A lead that's no longer there (deleted, or a wrong link). */
+export const gone = root => { root.innerHTML = `<div class="empty small">${icon("search_off")}<h2>Lead not found</h2>
+  <p>This lead may have been deleted.</p><a class="btn btn-white" href="/leads" data-link>All leads</a></div>`; };
 
 /* A short message at the bottom of the screen. */
 export function toast(text, isError = false){

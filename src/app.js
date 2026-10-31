@@ -1,6 +1,6 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
-   /  Today · /clients  list · /clients/new  add · /clients/:id  detail ·
-   /clients/:id/edit  edit · /settings
+   /  Today · /leads  list · /leads/new  add · /leads/:id  detail ·
+   /leads/:id/edit  edit · /settings  (old /clients… links go to /leads…)
    Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar and + button. */
 import { registerSW } from "./pwa.js";
 import { refreshDevice } from "./push.js";
@@ -9,10 +9,11 @@ import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
 import { cachedClients, loadSettings } from "./api.js";
 import { clock, status } from "./dates.js";
+import { isActive } from "./flow.js";
 import { icon, isWide } from "./ui.js";
 import { today } from "./views/today.js";
-import { clientsView } from "./views/clients.js";
-import { clientView } from "./views/client.js";
+import { leadsView } from "./views/leads.js";
+import { leadView } from "./views/lead.js";
 import { addView, editView } from "./views/form.js";
 import { settingsView } from "./views/settings.js";
 
@@ -21,10 +22,10 @@ const tabbar = document.getElementById("tabbar"), fab = document.getElementById(
 
 const ROUTES = [
   [/^\/$/, today, { tabs: true, fab: true }],
-  [/^\/clients$/, clientsView, { tabs: true, fab: true }],
-  [/^\/clients\/new$/, addView, {}],
-  [/^\/clients\/([\w-]+)\/edit$/, editView, {}],
-  [/^\/clients\/([\w-]+)$/, clientView, {}],
+  [/^\/leads$/, leadsView, { tabs: true, fab: true }],
+  [/^\/leads\/new$/, addView, {}],
+  [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
+  [/^\/leads\/([\w-]+)$/, leadView, {}],
   [/^\/settings$/, settingsView, { tabs: true }],
   [/./, notFound, {}],
 ];
@@ -50,6 +51,7 @@ function back(fallback){
 
 function render(){
   closeSheet();
+  if (/^\/clients(\/|$)/.test(location.pathname)) history.replaceState(history.state, "", location.pathname.replace("/clients", "/leads") + location.search);
   const path = location.pathname.replace(/\/+$/, "") || "/";
   const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
   const wide = isWide();
@@ -58,21 +60,20 @@ function render(){
   fab.hidden = wide || !hit.opts.fab;
   document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
   tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===path));
-  const section = path==="/" || (path.startsWith("/clients/") && history.state && history.state.from==="/") ? "/" : path.startsWith("/clients") ? "/clients" : path;
+  const section = path==="/" || (path.startsWith("/leads/") && history.state && history.state.from==="/") ? "/" : path.startsWith("/leads") ? "/leads" : path;
   side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
-  view.className = "view v-" + (path==="/" ? "today" : path==="/clients" ? "clients" : path==="/settings" ? "settings" : "page");
+  view.className = "view v-" + (path==="/" ? "today" : path==="/leads" ? "leads" : path==="/settings" ? "settings" : "page");
   view.scrollTop = 0; window.scrollTo(0, 0);
   hit.fn(view, { id: hit.m[1] }, { go, back });
   sideCounts();
 }
 
-/* Sidebar badges (due now, open clients) and the morning summary note. */
+/* Sidebar badges (due now, active leads) and the morning summary note. */
 function sideCounts(){
   const clients = cachedClients() || [];
   const due = clients.filter(c=>c.next_due && status(c.next_due)!=="upcoming").length;
-  const open = clients.filter(c=>c.next_due).length;
   document.getElementById("countToday").textContent = due || "";
-  document.getElementById("countClients").textContent = open || "";
+  document.getElementById("countLeads").textContent = clients.filter(isActive).length || "";
   loadSettings().then(s=>{
     const foot = document.getElementById("sideSummary");
     foot.querySelector("span").textContent = s.morning_summary ? `Morning summary at ${clock(s.summary_time)}` : "Morning summary off";
@@ -94,7 +95,7 @@ document.addEventListener("click", e=>{
 window.addEventListener("popstate", e=>{ depth = (e.state && e.state.depth) || 0; render(); });
 // coming back to the app later: refresh what's due
 document.addEventListener("visibilitychange", ()=>{
-  if (document.visibilityState==="visible" && (location.pathname==="/" || location.pathname==="/clients") && !document.querySelector(".layer")) render();
+  if (document.visibilityState==="visible" && (location.pathname==="/" || location.pathname==="/leads") && !document.querySelector(".layer")) render();
 });
 
 /* Offline: a note at the top; back online: refresh what's on screen. */

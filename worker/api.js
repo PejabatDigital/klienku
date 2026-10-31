@@ -1,32 +1,27 @@
-/* KlienKu API for clients and settings. Every route needs sign-in and only touches the
-   signed-in user's rows.
+/* KlienKu API for leads and settings. Every route needs sign-in and only touches the
+   signed-in user's rows. Leads live in the `clients` table (see migrations/0005_leads.sql):
+   `stage` is the status, `area` the location, `notes` the general notes, `next_due` /
+   `next_step` the next follow-up date and note.
 
-   GET    /api/clients                 every client (open, won and closed) with last_contact, small enough to send whole
-   POST   /api/clients                 add a client with its first next step
-   GET    /api/clients/:id             one client and its activity, newest first
-   PATCH  /api/clients/:id             edit details, or fix stage / next step / due
-   POST   /api/clients/:id/steps       finish the next step: done | no_reply | moved, then set the new one
+   GET    /api/clients                 every lead (active, won and lost) with last_contact, small enough to send whole
+   POST   /api/clients                 add a lead (the follow-up is optional)
+   GET    /api/clients/:id             one lead and its activity, newest first
+   PATCH  /api/clients/:id             edit details, change status ({status, reason}), set or clear the follow-up ({next_due, next_step})
    POST   /api/clients/:id/notes       add a note to the history
-   POST   /api/clients/:id/close       won | lost | ended, with a reason and note
-   POST   /api/clients/:id/reopen      back to open with a new next step
    DELETE /api/clients/:id             remove for good (duplicates and mistakes)
    GET    /api/settings, PUT /api/settings   follow-up rules and reminders
    GET    /api/export                  every client and its history as a spreadsheet file (CSV)
    DELETE /api/account                 delete the signed-in user and everything they own */
 
-export const STAGES = ["new", "contacting", "site_visit", "quote_sent", "negotiating"];
-const OUTCOMES = ["won", "lost", "ended"];
+import { CLOSED, PROJECT_TYPES, SOURCES, STATUSES } from "../src/lists.js";
+
+const STATUS_KEYS = STATUSES.map(s=>s.key), statusName = key => (STATUSES.find(s=>s.key===key) || {}).label || key;
 /* Settings: [check, default]. A check returns the cleaned value or refuses it. */
-const int = (min, max) => (v, k) => Number.isInteger(Number(v)) && v >= min && v <= max ? Number(v) : bad(`${k} must be a whole number from ${min} to ${max}`);
 const oneOf = (...ok) => (v, k) => ok.includes(Number(v)) ? Number(v) : bad(`${k} must be one of ${ok.join(", ")}`);
 const flag = (v, k) => typeof v==="boolean" || v===0 || v===1 ? (v ? 1 : 0) : bad(`${k} must be on or off`);
 const hhmm = (v, k) => typeof v==="string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : bad(`${k} must be HH:MM`);
 const zone = (v, k) => { try { new Intl.DateTimeFormat("en", { timeZone: v }); return v; } catch(e){ return bad(`${k} is not a time zone`); } };
 const SETTINGS = {
-  follow_up_days: [int(1, 30), 2],
-  max_tries: [int(1, 10), 3],
-  quote_after_visit_days: [int(1, 30), 2],
-  quote_follow_up_days: [int(1, 30), 3],
   notify_due: [flag, 1],
   remind_before: [oneOf(0, 5, 10, 15, 30, 60), 15],
   morning_summary: [flag, 1],
@@ -57,8 +52,29 @@ const due = v => {
   if (t.getUTCFullYear()!==y || t.getUTCMonth()!==m - 1 || t.getUTCDate()!==d) bad("due is not a real date");
   return v;
 };
-const stage = v => STAGES.includes(v) ? v : bad("unknown stage");
-const step = v => text(v, 120, "next step", true);
+const status = v => STATUS_KEYS.includes(v) ? v : bad("unknown status");
+const choice = (list, name) => v => { v = text(v, 60, name); return !v || list.includes(v) ? v : bad("unknown " + name); };
+const projectType = choice(PROJECT_TYPES, "project type"), source = choice(SOURCES, "lead source");
+/* Estimated budget in whole ringgit, or null when not given. */
+const budget = v => {
+  if (v==null || v==="") return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 && n <= 100_000_000 ? n : bad("budget must be a whole number of ringgit");
+};
+/* The follow-up: a due value and a short note, or both null when there's none. */
+const followUp = b => {
+  if (b.next_due==null || b.next_due==="") return { next_due: null, next_step: null };
+  return { next_due: due(b.next_due), next_step: text(b.next_step, 200, "follow-up note") || null };
+};
+/* Lead details from a request body; when editing, `c` (the lead as it is) fills in what isn't sent. */
+const details = (b, c = null) => {
+  const pick = (k, check) => !c || k in b ? check(b[k]) : c[k];
+  return {
+    name: pick("name", v=>text(v, 120, "name", true)), phone: pick("phone", v=>text(v, 40, "phone")),
+    area: pick("area", v=>text(v, 120, "location")), project_type: pick("project_type", projectType),
+    source: pick("source", source), budget: pick("budget", budget), notes: pick("notes", v=>text(v, 5000, "general notes")),
+  };
+};
 
 async function body(request){
   const raw = await request.text();
@@ -72,12 +88,21 @@ const id = () => crypto.randomUUID();
 
 async function getClient(db, user, cid){
   const c = await db.prepare("SELECT * FROM clients WHERE id = ?1 AND user_id = ?2").bind(cid, user).first();
-  if (!c) throw new HttpError(404, "Client not found");
+  if (!c) throw new HttpError(404, "Lead not found");
   return c;
 }
 const log = (db, user, cid, kind, txt, at = now()) =>
   db.prepare("INSERT INTO activity (id, user_id, client_id, kind, text, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
     .bind(id(), user, cid, kind, txt, at);
+
+/* "Tue 4 Nov" (and ", 3:00 pm") for a due value, for history lines. */
+function dueText(v){
+  const [y, m, d] = v.slice(0, 10).split("-").map(Number), t = v.slice(11, 16);
+  const day = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(Date.UTC(y, m - 1, d)).replace(",", "");
+  if (!t) return day;
+  const [h, mi] = t.split(":").map(Number);
+  return `${day}, ${h % 12 || 12}:${String(mi).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+}
 
 /* A settings row (or none) with defaults filled in. */
 export function withDefaults(row){
@@ -87,11 +112,8 @@ export function withDefaults(row){
 }
 const settings = async (db, user) => withDefaults(await db.prepare("SELECT * FROM settings WHERE user_id = ?1").bind(user).first());
 
-/* ── Download (CSV) ── one row per client, its history in the last column. Dates are in the
+/* ── Download (CSV) ── one row per lead, its history in the last column. Dates are in the
    user's time zone; a byte-order mark makes Excel read it as UTF-8. */
-const STAGE_NAMES = { new: "New", contacting: "Contacting", site_visit: "Site visit", quote_sent: "Quote sent",
-  negotiating: "Negotiating", won: "Won", closed: "Closed" };
-const RESULTS = { won: "Won", lost: "Lost", ended: "Ended by you" };
 const cell = v => {
   let t = String(v ?? "");
   if (/^[=@\t]/.test(t)) t = "'" + t; // never let a spreadsheet run it as a formula
@@ -102,11 +124,11 @@ function csv(clients, activity, timeZone){
   const day = iso => iso ? ymd.format(new Date(iso)) : "";
   const history = {};
   for (const a of activity) (history[a.client_id] ||= []).push(`${day(a.at)}  ${a.text.replace(/\n/g, " — ")}`);
-  const rows = [["Name", "Phone", "What they need", "Area", "Stage", "Result", "Reason", "Next step", "Due", "Tries",
-    "Added", "Closed", "Last contact", "History"]];
-  for (const c of clients) rows.push([c.name, c.phone, c.need, c.area, STAGE_NAMES[c.stage] || c.stage, RESULTS[c.outcome] || "",
-    c.close_reason, c.next_step, (c.next_due || "").replace("T", " "), c.tries, day(c.created_at), day(c.closed_at),
-    day(c.last_contact), (history[c.id] || []).join("\n")]);
+  const rows = [["Name", "Phone", "Location", "Project type", "Lead source", "Estimated budget (RM)", "Status", "Lost reason",
+    "Next follow-up", "Follow-up note", "Added", "Closed", "Last contacted", "General notes", "History"]];
+  for (const c of clients) rows.push([c.name, c.phone, c.area, c.project_type, c.source, c.budget ?? "", statusName(c.stage),
+    c.close_reason, (c.next_due || "").replace("T", " "), c.next_step, day(c.created_at), day(c.closed_at),
+    day(c.last_contact), c.notes, (history[c.id] || []).join("\n")]);
   return "\uFEFF" + rows.map(r=>r.map(cell).join(",")).join("\r\n") + "\r\n";
 }
 
@@ -121,17 +143,12 @@ const routes = [
 
   ["POST", /^\/api\/clients$/, async ({ db, user, request }) => {
     const b = await body(request), t = now(), cid = id();
-    const c = {
-      name: text(b.name, 120, "name", true), phone: text(b.phone, 40, "phone"),
-      need: text(b.need, 500, "what they need"), area: text(b.area, 120, "area"),
-      notes: text(b.notes, 5000, "notes"), next_step: step(b.next_step), next_due: due(b.next_due),
-    };
+    const c = details(b), f = followUp(b);
     await db.batch([
-      db.prepare(`INSERT INTO clients (id, user_id, name, phone, need, area, notes, stage, next_step, next_due, tries, created_at, updated_at)
-                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'new', ?8, ?9, 0, ?10, ?10)`)
-        .bind(cid, user, c.name, c.phone, c.need, c.area, c.notes, c.next_step, c.next_due, t),
+      db.prepare(`INSERT INTO clients (id, user_id, name, phone, area, project_type, source, budget, notes, stage, next_step, next_due, created_at, updated_at)
+                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'new', ?10, ?11, ?12, ?12)`)
+        .bind(cid, user, c.name, c.phone, c.area, c.project_type, c.source, c.budget, c.notes, f.next_step, f.next_due, t),
       log(db, user, cid, "created", "Added", t),
-      ...(c.notes ? [log(db, user, cid, "note", c.notes, t)] : []),
     ]);
     return json({ client: await getClient(db, user, cid) }, 201);
   }],
@@ -143,45 +160,34 @@ const routes = [
   }],
 
   ["PATCH", /^\/api\/clients\/([\w-]+)$/, async ({ db, user, request, params: [cid] }) => {
-    const c = await getClient(db, user, cid), b = await body(request);
-    const next = {
-      name: "name" in b ? text(b.name, 120, "name", true) : c.name,
-      phone: "phone" in b ? text(b.phone, 40, "phone") : c.phone,
-      need: "need" in b ? text(b.need, 500, "what they need") : c.need,
-      area: "area" in b ? text(b.area, 120, "area") : c.area,
-      stage: c.stage, next_step: c.next_step, next_due: c.next_due,
-    };
-    const open = STAGES.includes(c.stage);
-    if (open){
-      if ("stage" in b) next.stage = stage(b.stage);
-      if ("next_step" in b) next.next_step = step(b.next_step);
-      if ("next_due" in b) next.next_due = due(b.next_due);
-    }
-    const t = now(), notes = [];
-    if (next.stage!==c.stage) notes.push(log(db, user, cid, "stage", "Stage changed by hand", t));
-    if (next.next_step!==c.next_step || next.next_due!==c.next_due) notes.push(log(db, user, cid, "edited", "Next step changed by hand", t));
-    await db.batch([
-      db.prepare("UPDATE clients SET name = ?1, phone = ?2, need = ?3, area = ?4, stage = ?5, next_step = ?6, next_due = ?7, updated_at = ?8 WHERE id = ?9 AND user_id = ?10")
-        .bind(next.name, next.phone, next.need, next.area, next.stage, next.next_step, next.next_due, t, cid, user),
-      ...notes,
-    ]);
-    return json({ client: await getClient(db, user, cid) });
-  }],
+    const c = await getClient(db, user, cid), b = await body(request), t = now();
+    const next = { ...details(b, c), stage: c.stage, next_step: c.next_step, next_due: c.next_due, close_reason: c.close_reason, closed_at: c.closed_at };
+    const notes = [];
 
-  ["POST", /^\/api\/clients\/([\w-]+)\/steps$/, async ({ db, user, request, params: [cid] }) => {
-    const c = await getClient(db, user, cid), b = await body(request);
-    if (!STAGES.includes(c.stage)) bad("This client is closed");
-    const outcome = ["done", "no_reply", "moved"].includes(b.outcome) ? b.outcome : bad("outcome must be done, no_reply or moved");
-    const note = text(b.note, 5000, "note");
-    const nextStep = step(b.next_step), nextDue = due(b.next_due);
-    const nextStage = outcome==="done" && b.stage ? stage(b.stage) : c.stage;
-    const tries = outcome==="no_reply" ? c.tries + 1 : outcome==="done" ? 0 : c.tries;
-    const title = outcome==="done" ? `${c.next_step} — done` : outcome==="no_reply" ? `${c.next_step} — no reply` : `Moved: ${c.next_step}`;
-    const t = now();
+    if ("stage" in b && b.stage!==c.stage){
+      next.stage = status(b.stage);
+      const reason = text(b.reason, 200, "reason");
+      if (CLOSED.includes(next.stage)){
+        // Won and Lost have no follow-up
+        Object.assign(next, { next_step: null, next_due: null, closed_at: t, close_reason: next.stage==="lost" && reason ? reason : null });
+      } else Object.assign(next, { closed_at: null, close_reason: null });
+      notes.push(log(db, user, cid, "status", `Status: ${statusName(c.stage)} → ${statusName(next.stage)}` + (next.close_reason ? "\n" + next.close_reason : ""), t));
+    }
+    if ("next_due" in b){
+      if (CLOSED.includes(next.stage)) bad("Won and Lost leads have no follow-up");
+      const f = followUp(b);
+      if (f.next_due!==next.next_due || f.next_step!==next.next_step){
+        Object.assign(next, f);
+        notes.push(log(db, user, cid, "follow_up", f.next_due ? `Follow-up: ${dueText(f.next_due)}` + (f.next_step ? "\n" + f.next_step : "") : "Follow-up removed", t));
+      }
+    }
+
     await db.batch([
-      db.prepare("UPDATE clients SET stage = ?1, next_step = ?2, next_due = ?3, tries = ?4, updated_at = ?5 WHERE id = ?6 AND user_id = ?7")
-        .bind(nextStage, nextStep, nextDue, tries, t, cid, user),
-      log(db, user, cid, outcome, note ? `${title}\n${note}` : title, t),
+      db.prepare(`UPDATE clients SET name = ?1, phone = ?2, area = ?3, project_type = ?4, source = ?5, budget = ?6, notes = ?7, stage = ?8,
+                  next_step = ?9, next_due = ?10, close_reason = ?11, closed_at = ?12, updated_at = ?13 WHERE id = ?14 AND user_id = ?15`)
+        .bind(next.name, next.phone, next.area, next.project_type, next.source, next.budget, next.notes, next.stage,
+          next.next_step, next.next_due, next.close_reason, next.closed_at, t, cid, user),
+      ...notes,
     ]);
     return json({ client: await getClient(db, user, cid) });
   }],
@@ -194,35 +200,6 @@ const routes = [
       db.prepare("UPDATE clients SET updated_at = ?1 WHERE id = ?2 AND user_id = ?3").bind(t, cid, user),
     ]);
     return json({ ok: true }, 201);
-  }],
-
-  ["POST", /^\/api\/clients\/([\w-]+)\/close$/, async ({ db, user, request, params: [cid] }) => {
-    const c = await getClient(db, user, cid), b = await body(request);
-    if (!STAGES.includes(c.stage)) bad("Already closed");
-    const outcome = OUTCOMES.includes(b.outcome) ? b.outcome : bad("outcome must be won, lost or ended");
-    const reason = text(b.reason, 200, "reason"), note = text(b.note, 5000, "note"), t = now();
-    const title = outcome==="won" ? "Won" : outcome==="lost" ? "Lost" : "Ended by you";
-    const line = [title + (reason ? ": " + reason : ""), note].filter(Boolean).join("\n");
-    await db.batch([
-      db.prepare(`UPDATE clients SET stage = ?1, outcome = ?2, close_reason = ?3, next_step = NULL, next_due = NULL,
-                  closed_at = ?4, updated_at = ?4 WHERE id = ?5 AND user_id = ?6`)
-        .bind(outcome==="won" ? "won" : "closed", outcome, reason || null, t, cid, user),
-      log(db, user, cid, "closed", line, t),
-    ]);
-    return json({ client: await getClient(db, user, cid) });
-  }],
-
-  ["POST", /^\/api\/clients\/([\w-]+)\/reopen$/, async ({ db, user, request, params: [cid] }) => {
-    const c = await getClient(db, user, cid), b = await body(request);
-    if (STAGES.includes(c.stage)) bad("Already open");
-    const t = now();
-    await db.batch([
-      db.prepare(`UPDATE clients SET stage = ?1, outcome = NULL, close_reason = NULL, closed_at = NULL, next_step = ?2, next_due = ?3,
-                  tries = 0, updated_at = ?4 WHERE id = ?5 AND user_id = ?6`)
-        .bind(b.stage ? stage(b.stage) : "contacting", step(b.next_step), due(b.next_due), t, cid, user),
-      log(db, user, cid, "reopened", "Reopened", t),
-    ]);
-    return json({ client: await getClient(db, user, cid) });
   }],
 
   ["DELETE", /^\/api\/clients\/([\w-]+)$/, async ({ db, user, params: [cid] }) => {
@@ -244,7 +221,7 @@ const routes = [
     const date = new Intl.DateTimeFormat("en-CA", { timeZone: s.timezone }).format(new Date());
     return new Response(csv(clients, activity, s.timezone), { headers: {
       "content-type": "text/csv; charset=utf-8", "cache-control": "no-store",
-      "content-disposition": `attachment; filename="klienku-clients-${date}.csv"`,
+      "content-disposition": `attachment; filename="klienku-leads-${date}.csv"`,
     } });
   }],
 

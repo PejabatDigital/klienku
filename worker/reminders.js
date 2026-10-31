@@ -1,11 +1,11 @@
 /* Reminders, run by the Cron Trigger every 5 minutes (wrangler.jsonc "triggers").
    For each person with a device that accepts notifications:
-   - a step with a time (e.g. a 3:00 pm site visit): a notification `remind_before`
-     minutes before it, if "Notify when a step is due" is on;
+   - a follow-up with a time (e.g. a 3:00 pm site visit): a notification `remind_before`
+     minutes before it, if "Notify when a follow-up is due" is on;
    - the morning summary at `summary_time`: overdue and due today, if it's on;
-   - steps with only a date get their own notification at `summary_time` instead, but only
-     when the morning summary is off (otherwise the summary already lists them).
-   Everything is worked out in the person's time zone. Each reminder goes once: clients
+   - follow-ups with only a date get their own notification at `summary_time` instead, but
+     only when the morning summary is off (otherwise the summary already lists them).
+   Everything is worked out in the person's time zone. Each reminder goes once: leads
    remember the due value they were reminded about, settings the day of the last summary. */
 import { withDefaults } from "./api.js";
 import { sendPush } from "./push.js";
@@ -25,7 +25,7 @@ const minutes = (date, time = "00:00") => {
   return Date.UTC(y, m - 1, d, h, mi) / 60000;
 };
 const clock = hhmm => { const [h, m] = hhmm.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
-const plural = (n, w) => `${n} ${w}${n===1 ? "" : "s"}`;
+const step = c => c.next_step || "Follow up";
 
 /* What to send one person now: {messages, remindedIds, summaryDay}. Pure, so it can be tested. */
 export function plan(settings, clients, at = new Date()){
@@ -43,10 +43,10 @@ export function plan(settings, clients, at = new Date()){
       if (nowMin < moment) continue;
       remindedIds.push(c.id);
       if (nowMin - moment > LATE) continue;
-      messages.push({ title: c.name, body: `${c.next_step} at ${clock(time)}`, tag: "due-" + c.id, url: "/clients/" + c.id });
+      messages.push({ title: c.name, body: `${step(c)} at ${clock(time)}`, tag: "due-" + c.id, url: "/leads/" + c.id });
     } else if (s.notify_due && !s.morning_summary && date===local.date && nowMin >= summaryMin){
       remindedIds.push(c.id);
-      messages.push({ title: c.name, body: `Due today: ${c.next_step}`, tag: "due-" + c.id, url: "/clients/" + c.id });
+      messages.push({ title: c.name, body: `Due today: ${step(c)}`, tag: "due-" + c.id, url: "/leads/" + c.id });
     }
   }
 
@@ -57,7 +57,7 @@ export function plan(settings, clients, at = new Date()){
     if (overdue.length || today.length){
       const parts = [overdue.length && `${overdue.length} overdue`, today.length && `${today.length} due today`].filter(Boolean);
       const first = (overdue[0] || today[0]);
-      messages.push({ title: "Good morning", body: `${parts.join(", ")}. First: ${first.name} · ${first.next_step}`, tag: "summary", url: "/" });
+      messages.push({ title: "Good morning", body: `${parts.join(", ")}. First: ${first.name} · ${step(first)}`, tag: "summary", url: "/" });
     }
   }
   return { messages, remindedIds, summaryDay, local };

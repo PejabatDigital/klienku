@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>KlienKu</title>
-<meta name="description" content="Who to follow up with today, so no client is ever forgotten.">
+<meta name="description" content="Who to follow up with today, so no lead is ever forgotten.">
 <meta name="theme-color" content="#F5F4F1">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -21,13 +21,13 @@
 <!-- Mac and wide screens (≥ 1024 px): sidebar in place of the tab bar and + button -->
 <aside class="side" id="side" aria-label="KlienKu">
   <div class="side-brand"><img src="/icons/icon.svg" alt="" width="32" height="32"><span>Klien<b>Ku</b></span></div>
-  <a class="btn btn-primary side-add" href="/clients/new" data-link>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add client</a>
+  <a class="btn btn-primary side-add" href="/leads/new" data-link>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add lead</a>
   <nav class="side-nav">
     <a href="/" data-link data-tab="/">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Today<em id="countToday"></em></a>
-    <a href="/clients" data-link data-tab="/clients">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients<em id="countClients"></em></a>
+    <a href="/leads" data-link data-tab="/leads">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Leads<em id="countLeads"></em></a>
     <a href="/settings" data-link data-tab="/settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>Settings</a>
   </nav>
@@ -40,15 +40,15 @@
 <p class="offline-bar" id="offlineBar" role="status" hidden>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/></svg>Offline · showing what's saved on this device</p>
 
-<a class="fab" id="fab" href="/clients/new" data-link aria-label="Add a client" hidden>
+<a class="fab" id="fab" href="/leads/new" data-link aria-label="Add a lead" hidden>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
 </a>
 
 <nav class="tabbar" id="tabbar" aria-label="Main" hidden>
   <a href="/" data-link data-tab="/">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Today</a>
-  <a href="/clients" data-link data-tab="/clients">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients</a>
+  <a href="/leads" data-link data-tab="/leads">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Leads</a>
   <a href="/settings" data-link data-tab="/settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>Settings</a>
 </nav>

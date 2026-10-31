@@ -1,5 +1,5 @@
-/* Settings (Figma 6): reminders (this device, due-step notifications, morning summary),
-   follow-up rules, account (change password, download my data, sign out), about, and
+/* Settings (Figma 6): reminders (this device, follow-up notifications, morning summary),
+   account (change password, download my data, sign out), about, and
    delete my account. Changes save straight away. */
 import { forgetClients, loadSettings, saveSettings } from "../api.js";
 import { currentUser, signOut } from "../account.js";
@@ -10,13 +10,6 @@ import { closeSheet, openSheet } from "../sheets.js";
 import { deleteSheet, downloadSheet, passwordSheet } from "./account.js";
 import { esc, icon, problem, toast } from "../ui.js";
 
-const RULES = [
-  { key: "follow_up_days", label: "No reply → follow up after", unit: "day", max: 14 },
-  { key: "quote_after_visit_days", label: "After site visit → quote within", unit: "day", max: 14 },
-  { key: "quote_follow_up_days", label: "After quote → follow up after", unit: "day", max: 14 },
-  { key: "max_tries", label: "Suggest closing after", unit: "try", max: 10 },
-];
-const amount = (n, unit) => unit==="try" ? `${n} ${n===1 ? "try" : "tries"}` : `${n} day${n===1 ? "" : "s"}`;
 const BEFORE = [0, 5, 10, 15, 30, 60];
 const before = n => n ? `${n} min before` : "At the time";
 const TIMES = Array.from({ length: 15 }, (_, i)=>`${String(5 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`); // 05:00–12:00
@@ -68,21 +61,18 @@ export async function settingsView(root){
     <p class="label">Reminders</p>
     <div class="group">
       ${device}
-      ${toggle("notify_due", "Notify when a step is due", s.notify_due)}
+      ${toggle("notify_due", "Notify when a follow-up is due", s.notify_due)}
       ${pick("remind_before", "Remind me", s.remind_before, BEFORE, before)}
       ${toggle("morning_summary", "Morning summary", s.morning_summary)}
       ${pick("summary_time", "Summary time", s.summary_time, TIMES.includes(s.summary_time) ? TIMES : [s.summary_time, ...TIMES], clock)}
       ${pushState()==="ready" ? `<button type="button" class="srow" data-act="test"><span>Send a test notification</span>${icon("chevron")}</button>` : ""}
     </div>
-    <p class="hint">Steps with a time remind you before. Steps with only a date are in the morning summary.</p>
-    <p class="label">Follow-up rules</p>
-    <div class="group">${RULES.map(r=>pick(r.key, r.label, s[r.key], Array.from({ length: r.max }, (_, i)=>i + 1), n=>amount(Number(n), r.unit))).join("")}</div>
-    <p class="hint">KlienKu uses these to suggest the next step when you tap Mark done.</p>
+    <p class="hint">Follow-ups with a time remind you before. Follow-ups with only a date are in the morning summary.</p>
     <p class="label">Account</p>
     <div class="group">
       <div class="srow"><span>Email</span><b>${esc(user && user.email)}</b></div>
       <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
-      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your clients and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
+      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your leads and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
       <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
     </div>
     <p class="label">About</p>
@@ -93,7 +83,7 @@ export async function settingsView(root){
     </div>
     <p class="label">Danger zone</p>
     <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
-      <span>Removes your account and all your clients for good.</span></button>
+      <span>Removes your account and all your leads for good.</span></button>
     <p class="foot">KlienKu · { kasah kod }</p>`;
 
   // settings saved on the server

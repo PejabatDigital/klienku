@@ -1,10 +1,12 @@
 # KlienKu — project brief for Claude Code
 
-KlienKu ("my client" in Malay) tells you who to follow up with today, so no client is ever
-forgotten. Built for Amin's own WhatsApp enquiries first, but generic and ready for anyone
-to use later: not tied to any industry or company. A Kasah Kod app.
+KlienKu ("my client" in Malay) tells you who to follow up with today, so no lead is ever
+forgotten. A Kasah Kod app.
 
-## The concept
+**Version 2 (decided 31 Oct 2026) changes direction:** a lightweight lead CRM built for
+Renovasi KL. See "Version 2 — lead CRM" below; where it differs from Version 1, Version 2 wins.
+
+## The concept (Version 1, as built in Phases 1–6)
 - Clients come in from WhatsApp enquiries. Amin adds them by hand: name, phone, what they need.
   (Website form → lead is for later.)
 - **Core rule: every open client always has one next step and a date.**
@@ -141,6 +143,65 @@ to use later: not tied to any industry or company. A Kasah Kod app.
      are made plain text. `npm audit`: 0 issues. Not built: two-step code (Figma 16),
      editable stages and close reasons.
 7. **Go live** — two weeks of real use alongside pen and paper, then fix and adjust.
+   Done: Amin used it and found it not smooth enough → Version 2.
+
+## Version 2 — lead CRM
+Source: Amin's "Renovasi KL Lead Management CRM — MVP Requirements" (v1.0, 8 pages; a PDF
+on his Mac, not in the repo). Principle: every lead is accounted for, every conversation is
+recorded, and every potential customer has a clear next action. Lightweight, not an
+enterprise CRM. Mac: a full leads table; phone: a simpler version of the same.
+
+Decisions (Amin, 31 Oct 2026):
+- Built for **Renovasi KL** now; keep the KlienKu name. Statuses, project types and sources
+  live in one place in the code so they can be made editable later.
+- The word is **"Leads"** everywhere (replaces "Clients").
+- Statuses, free dropdown, any order, each change logged: New, Contacted, Awaiting Customer,
+  In Discussion, Site Visit, Quotation Sent, Negotiation, Won, Lost, On Hold.
+- Fields: name, phone, location (was Area), project type, lead source, estimated budget (RM),
+  general notes (always visible, editable), created, last contacted, next follow-up date +
+  follow-up note, activity log. No visible lead ID.
+- Project types: Bathroom, Kitchen, Full renovation, Extension, Roofing, Painting,
+  Plumbing / electrical, Other. Sources: WhatsApp, Facebook, Instagram, Google, Website,
+  Referral, Walk-in, Other.
+- **Follow-up date is optional, with no default.** Active leads without one show under
+  "No follow-up scheduled" (Dashboard, and counted in the morning summary).
+- Interaction log: type (WhatsApp, Call, Meeting, Site visit, Customer request, Quotation
+  sent, Follow-up attempt, Other), date and time, description. Never overwritten.
+- **Drop** the automatic next-step suggestions and the "tries" counter (and their Settings).
+  Recording a contact = one sheet: what happened → status → next follow-up date + note.
+- Claude designs the new screens in code, in the current KlienKu style (tokens below);
+  Amin reviews on phone and Mac. The Figma stays the reference for look and feel.
+- Existing data moves across: Contacting → Contacted, Site visit → Site Visit, Quote sent →
+  Quotation Sent, Negotiating → Negotiation, Won → Won, Closed (lost / ended) → Lost with
+  its reason; Area → Location; "What they need" → start of General notes (project type left
+  blank); next step + due → follow-up note + date. All history kept.
+- Out of scope: WhatsApp automation, AI, forecasting, invoices/quotations, marketing,
+  team permissions, project management.
+
+Phases (one at a time, each confirmed by Amin):
+- **V2.1 Lead record** — built 31 Oct 2026, waiting for Amin to confirm.
+  - Lists in `src/lists.js` (imported by the app and the Worker). `migrations/0005_leads.sql`
+    adds `project_type`, `source`, `budget` and moves old data across. The table is still
+    `clients` and the API still `/api/clients`; columns: `stage` = status, `area` =
+    location, `notes` = general notes, `next_due`/`next_step` = follow-up date/note.
+  - `PATCH /api/clients/:id` changes details, status (`{stage, reason}`; Won/Lost clear the
+    follow-up, set `closed_at`; Lost keeps the reason) and follow-up (`{next_due, next_step}`,
+    null clears). Logged as `status` / `follow_up` history. `/steps`, `/close`, `/reopen`,
+    `src/flow.js` suggestions and the follow-up rules in Settings are gone.
+  - App paths `/leads`, `/leads/new`, `/leads/:id`, `/leads/:id/edit` (old `/clients…`
+    links redirect). Views `src/views/leads.js`, `lead.js`, `form.js`. Lead page: status
+    dropdown, next follow-up (or "No follow-up scheduled"), budget/source/last contacted/
+    added, General notes (edit in place), History. Edit form has details only; Add form
+    preselects WhatsApp as source, follow-up optional.
+  - Today already lists "No follow-up scheduled" (between Today and Coming up) so undated
+    leads aren't missed before V2.3. Colour for "no follow-up": `--none` #9A6F0A (mustard).
+- **V2.2 Log interaction + follow-up** — the one sheet that replaces Mark done.
+- **V2.3 Dashboard** — Today becomes the Dashboard: Active, Overdue, Due today, Upcoming,
+  New this week; action list; No follow-up scheduled; leads by status (Mac).
+- **V2.4 All Leads** — Mac table with filters (status, project type, source, follow-up),
+  lead opens in a side panel; phone cards; Add lead in under 30 seconds.
+- **V2.5 Reminders tidy-up** — summary counts leads with no follow-up; email summary only
+  if Amin asks.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"
