@@ -245,7 +245,7 @@ Phases (one at a time, each confirmed by Amin):
     "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
     have no follow-up date yet." when that's all there is. Due-step reminders unchanged.
   - No email summary (only if Amin asks).
-- **V2.8 New Dashboard** (contents decided 1 Nov 2026, designed in Figma, approved, built):
+- ✅ **V2.8 New Dashboard** — confirmed by Amin 1 Nov 2026 (live). Designed in Figma first:
   - Period switch: This month · Last 3 months · All time (calendar months; remembered on
     the device, `kk:dash-period`).
   - Active leads: every lead not Won/Lost, always "now" (ignores the period). Navy card.
