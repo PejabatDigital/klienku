@@ -236,30 +236,28 @@ Phases (one at a time, each confirmed by Amin):
     card (and in the History heading); its sheet has type, note, when, status only.
   - Add lead has no follow-up section. Sources as above.
 - ✅ **V2.7 Today and Dashboard apart** — confirmed by Amin 1 Nov 2026 (live).
-- **V2.8 Dashboard contents** (decided 1 Nov 2026; to be designed in Figma first, then built):
-  - Period switch: This month · Last 3 months · All time.
-  - Active leads: every lead not Won/Lost, always "now" (ignores the period).
-  - For the period, counted by when the lead came in (`created_at`): Total leads; Win
-    rate = Won ÷ Total leads; Won value = sum of estimated budget of the Won leads;
-    Leads by project type (count only).
-  - Removed from the Dashboard: follow-up numbers (Today only), Leads by status, New this week.
-  - Figma (waiting for Amin's review): 18 · Desktop · Dashboard `24:311`, 19 · Dashboard
-    `27:412` (phone, scrolling), components in section "Dashboard components" `23:311`
-    (Period switch, Active leads card in navy #1E2A4A, Metric, Bar row and Bar row · compact
-    with Fill=0/25/50/75/100 variants).
   - Today (`/`, `src/views/today.js`): date, a one-line count, Overdue / Due today / No
     follow-up scheduled / Coming up · next 7 days; Mac: list left, lead right. `?s=<list>`
-    scrolls to a list. `groupsOf()` lives here and is shared with the Dashboard.
-  - Dashboard (`/dashboard`, `src/views/dashboard.js`): six numbers (the follow-up ones open
-    Today at that list, Active → Leads, New this week scrolls), Leads by status as
-    horizontal bars (→ `/leads?status=`), Won / Lost totals, New this week cards. Mac: numbers
-    across, chart beside new-this-week; a card opens the lead beside the Leads table.
+    scrolls to a list.
   - Menu and tab bar: Today · Dashboard · Leads · Settings. Back from a lead says where
     it was opened from.
   - `runReminders` loads all active leads (not only those with a date); `plan()` adds
     "N with no follow-up" to the morning summary, and sends "Nothing due today. N leads
     have no follow-up date yet." when that's all there is. Due-step reminders unchanged.
   - No email summary (only if Amin asks).
+- **V2.8 New Dashboard** (contents decided 1 Nov 2026, designed in Figma, approved, built):
+  - Period switch: This month · Last 3 months · All time (calendar months; remembered on
+    the device, `kk:dash-period`).
+  - Active leads: every lead not Won/Lost, always "now" (ignores the period). Navy card.
+  - For the period, counted by when the lead came in (`created_at`): Total leads; Win
+    rate = Won ÷ Total leads; Won value = sum of estimated budget of the Won leads (says
+    how many won leads have no budget); Leads by project type (count and share; most
+    first; a "Not set" row only when some leads have no type).
+  - Removed from the Dashboard: follow-up numbers (Today only), Leads by status, New this week.
+  - `src/views/dashboard.js`; styles under "Dashboard (Figma 18, 19)" in `src/app.css`.
+  - Figma: 18 · Desktop · Dashboard `24:311`, 19 · Dashboard `27:412` (phone, scrolling),
+    components in section "Dashboard components" `23:311` (Period switch, Active leads
+    card in navy #1E2A4A, Metric, Bar row and Bar row · compact with Fill variants).
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"
@@ -268,7 +266,8 @@ holds the icon). Read it with the Figma MCP server when connected.
 - Phone screens (393×852): 1 Today `4:2`, 2 Leads `4:147`, 3 Lead detail `4:291`,
   4 Mark done → next step `4:385`, 5 Add lead `4:534`, 6 Settings `4:583`,
   9 Edit lead `8:311`, 10 Close lead `8:360`, 11 Delete confirm `8:419`.
-- Desktop (1440×900): 7 Today `6:221`, 8 All leads table `7:311`.
+- Desktop (1440×900): 7 Today `6:221`, 8 All leads table `7:311`, 18 Dashboard `24:311`.
+- 19 Dashboard (phone, 393×1212) `27:412`.
 - Account: 12 Sign in `9:312`, 13 Forgot password `9:346`, 14 Check your email `9:370`,
   15 Set new password `9:396`, 16 Two-step code `9:434`, 17 First-time setup `9:470`.
 - Components: Lead card `3:51`, Tab bar `3:109`.

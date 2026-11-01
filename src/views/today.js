@@ -1,20 +1,17 @@
 /* Today (Figma 1; Mac: Figma 7): what needs doing — overdue, due today, active leads with no
    follow-up, and coming up in the next 7 days. The numbers live on the Dashboard. On wide
    screens the list sits on the left and the chosen lead opens on the right (?c=<id> keeps
-   the choice). ?s=<list> (from a Dashboard number) scrolls to that list. */
+   the choice). ?s=<list> scrolls to that list. */
 import { cachedClients, loadClients } from "../api.js";
-import { addDays, localDay, longToday, status } from "../dates.js";
+import { addDays, longToday, status } from "../dates.js";
 import { isActive } from "../flow.js";
 import { card, esc, icon, isWide, problem } from "../ui.js";
 import { leadView } from "./lead.js";
 
 const byDue = (a, b) => a.next_due < b.next_due ? -1 : a.next_due > b.next_due ? 1 : 0;
 const newest = (a, b) => b.created_at.localeCompare(a.created_at);
-/* Monday of this week, as YYYY-MM-DD. */
-const monday = () => addDays(-((new Date().getDay() + 6) % 7));
-
-/* The leads in each list (shared with the Dashboard). */
-export function groupsOf(clients){
+/* The leads in each list. */
+function groupsOf(clients){
   const active = clients.filter(isActive), dated = active.filter(c=>c.next_due).sort(byDue), week = addDays(7);
   const upcoming = dated.filter(c=>status(c.next_due)==="upcoming");
   return {
@@ -23,7 +20,6 @@ export function groupsOf(clients){
     today: dated.filter(c=>status(c.next_due)==="today"),
     none: active.filter(c=>!c.next_due).sort(newest),
     upcoming, soon: upcoming.filter(c=>c.next_due.slice(0, 10) <= week),
-    fresh: clients.filter(c=>localDay(c.created_at) >= monday()).sort(newest),
   };
 }
 
