@@ -259,6 +259,18 @@ Phases (one at a time, each confirmed by Amin):
     components in section "Dashboard components" `23:311` (Period switch, Active leads
     card in navy #1E2A4A, Metric, Bar row and Bar row · compact with Fill variants).
 
+- **V2.9 Menu order + Settings pages** (asked by Amin 1 Nov 2026):
+  - Menu and tab bar: Dashboard · Today · Leads · Settings. The app still opens on Today (`/`).
+  - Settings (`/settings`) is a short menu: Account, Notifications, About, each its own page
+    (`/settings/account`, `/settings/notifications`, `/settings/about`) with Back to Settings.
+    Notifications = the old Reminders section; the sidebar's morning-summary note opens it.
+  - Account (`accountPage` in `src/views/account.js`): Name and Phone (tap → sheet, empty
+    clears), Email (read only), Change password, Download my data, Sign out, then Danger
+    zone: Delete my account.
+  - Name is Better Auth's `user.name`; phone is `user.phone` (Better Auth `additionalFields`,
+    `migrations/0007_profile.sql`). Saved with `POST /api/auth/update-user`; the auth hook
+    refuses a name over 100 or a phone over 30 characters.
+
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"
 https://www.figma.com/design/XB2OhN539kQ4KY4O1ms9o2 (page "App screens"; "App icon" page

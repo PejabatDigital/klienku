@@ -1,6 +1,6 @@
 /* Sign-in with email and password (Better Auth), stored in D1. Its routes live under
    /api/auth/*: POST sign-up/email, sign-in/email, sign-out, request-password-reset,
-   reset-password, change-password, send-verification-email; GET get-session, verify-email,
+   reset-password, change-password, update-user, send-verification-email; GET get-session, verify-email,
    reset-password/:token.
 
    Only the first account can be created (Amin's) while OPEN_SIGNUP is "false".
@@ -48,10 +48,16 @@ export function getAuth(env){
           "To finish setting up your account, open this link (it works for one hour):\n" + url + "\n\n" +
           "If you didn't create a KlienKu account, ignore this email."),
       },
+      // Settings → Account: name (Better Auth's own) and phone, changed with POST update-user
+      user: { additionalFields: { phone: { type: "string", required: false } } },
       hooks: {
         before: createAuthMiddleware(async ctx=>{
           if (ctx.path==="/sign-up/email" && !(await signupOpen(env))){
             throw new APIError("FORBIDDEN", { message: "KlienKu is private. Only its owner can sign in.", code: "SIGNUP_CLOSED" });
+          }
+          if (ctx.path==="/update-user"){
+            const b = ctx.body || {}, long = (v, n) => v!=null && (typeof v!=="string" || v.length > n);
+            if (long(b.name, 100) || long(b.phone, 30)) throw new APIError("BAD_REQUEST", { message: "That's too long.", code: "TOO_LONG" });
           }
         }),
       },

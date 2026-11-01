@@ -1,13 +1,13 @@
-/* Settings (Figma 6): reminders (this device, follow-up notifications, morning summary),
-   account (change password, download my data, sign out), about, and
-   delete my account. Changes save straight away. */
-import { forgetClients, loadSettings, saveSettings } from "../api.js";
-import { currentUser, signOut } from "../account.js";
+/* Settings (Figma 6): a short menu, each part on its own page — /settings/account (in
+   account.js), /settings/notifications (this device, follow-up reminders, morning
+   summary) and /settings/about. Changes save straight away. */
+import { loadSettings, saveSettings } from "../api.js";
+import { currentUser } from "../account.js";
 import { clock } from "../dates.js";
 import { isIOS } from "../pwa.js";
 import { deviceOn, pushState, sendTest, turnOff, turnOn } from "../push.js";
 import { closeSheet, openSheet } from "../sheets.js";
-import { deleteSheet, downloadSheet, passwordSheet } from "./account.js";
+import { accountPage } from "./account.js";
 import { esc, icon, problem, toast } from "../ui.js";
 
 const BEFORE = [0, 5, 10, 15, 30, 60];
@@ -46,45 +46,36 @@ function testSheet(){
   }));
 }
 
-export async function settingsView(root){
-  root.innerHTML = `<header class="head"><h1>Settings</h1></header><div class="loading">Loading…</div>`;
-  let s, user, device;
-  try { [s, user, device] = await Promise.all([loadSettings(), currentUser(), deviceRow()]); }
-  catch(e){ problem(root, e, ()=>settingsView(root)); root.insertAdjacentHTML("afterbegin", `<header class="head"><h1>Settings</h1></header>`); return; }
+/* Sub-pages start with Back to Settings and their title. */
+export const subHead = title => `<nav class="topbar"><button class="back" data-act="back">${icon("back")}Settings</button></nav>
+  <header class="head"><h1>${title}</h1></header>`;
 
-  // reminders use the time zone of the device last used here
+/* Reminders use the time zone of the device last used here. */
+function syncZone(s){
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (zone && zone!==s.timezone) saveSettings({ timezone: zone }).then(n=>{ s = n; }).catch(()=>{});
+  if (zone && zone!==s.timezone) saveSettings({ timezone: zone }).catch(()=>{});
+}
 
-  root.innerHTML = `
-    <header class="head"><h1>Settings</h1></header>
-    <p class="label">Reminders</p>
+/* /settings/notifications */
+async function notificationsPage(root){
+  root.insertAdjacentHTML("beforeend", `<div class="loading">Loading…</div>`);
+  let s, device;
+  try { [s, device] = await Promise.all([loadSettings(), deviceRow()]); }
+  catch(e){ return problem(root.querySelector(".loading"), e, ()=>settingsView(root, { id: "notifications" })); }
+  syncZone(s);
+  root.querySelector(".loading").outerHTML = `
     <div class="group">
       ${device}
       ${toggle("notify_due", "Notify when a follow-up is due", s.notify_due)}
       ${pick("remind_before", "Remind me", s.remind_before, BEFORE, before)}
-      ${toggle("morning_summary", "Morning summary", s.morning_summary)}
-      ${pick("summary_time", "Summary time", s.summary_time, TIMES.includes(s.summary_time) ? TIMES : [s.summary_time, ...TIMES], clock)}
-      ${pushState()==="ready" ? `<button type="button" class="srow" data-act="test"><span>Send a test notification</span>${icon("chevron")}</button>` : ""}
     </div>
     <p class="hint">Follow-ups with a time remind you before. Follow-ups with only a date, and leads with no follow-up yet, are in the morning summary.</p>
-    <p class="label">Account</p>
+    <p class="label">Morning summary</p>
     <div class="group">
-      <div class="srow"><span>Email</span><b>${esc(user && user.email)}</b></div>
-      <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
-      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your leads and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
-      <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
+      ${toggle("morning_summary", "Morning summary", s.morning_summary)}
+      ${pick("summary_time", "Summary time", s.summary_time, TIMES.includes(s.summary_time) ? TIMES : [s.summary_time, ...TIMES], clock)}
     </div>
-    <p class="label">About</p>
-    <div class="group">
-      <a class="srow" href="/privacy"><span>Privacy Policy</span>${icon("chevron")}</a>
-      <a class="srow" href="/terms"><span>Terms of Use</span>${icon("chevron")}</a>
-      <a class="srow" href="mailto:hello@kasahkod.cc?subject=KlienKu"><span>Contact</span><b>hello@kasahkod.cc</b></a>
-    </div>
-    <p class="label">Danger zone</p>
-    <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
-      <span>Removes your account and all your leads for good.</span></button>
-    <p class="foot">KlienKu · { kasah kod }</p>`;
+    ${pushState()==="ready" ? `<div class="group gap"><button type="button" class="srow" data-act="test"><span>Send a test notification</span>${icon("chevron")}</button></div>` : ""}`;
 
   // settings saved on the server
   root.querySelectorAll("select, input.switch:not([name=device])").forEach(el=>el.addEventListener("change", async ()=>{
@@ -102,16 +93,45 @@ export async function settingsView(root){
     } catch(e){
       dev.checked = !dev.checked;
       toast(e.message==="dismissed" ? "Notifications weren't allowed." : e.message==="blocked" ? "Notifications are turned off for KlienKu." : e.message, true);
-      if (e.message==="blocked") settingsView(root);
+      if (e.message==="blocked") settingsView(root, { id: "notifications" });
     }
   });
   const test = root.querySelector('[data-act="test"]');
   if (test) test.addEventListener("click", testSheet);
-  root.querySelector('[data-act="password"]').addEventListener("click", passwordSheet);
-  root.querySelector('[data-act="download"]').addEventListener("click", downloadSheet);
-  root.querySelector('[data-act="delete"]').addEventListener("click", ()=>deleteSheet(user && user.email));
-  root.querySelector('[data-act="signout"]').addEventListener("click", async ()=>{
-    try { await turnOff().catch(()=>{}); await signOut(); forgetClients(); location.replace("/signin"); }
-    catch(e){ toast("Couldn't sign out. Check your connection and try again.", true); }
-  });
+}
+
+/* /settings/about */
+function aboutPage(root){
+  root.insertAdjacentHTML("beforeend", `<div class="group">
+      <a class="srow" href="/privacy"><span>Privacy Policy</span>${icon("chevron")}</a>
+      <a class="srow" href="/terms"><span>Terms of Use</span>${icon("chevron")}</a>
+      <a class="srow" href="mailto:hello@kasahkod.cc?subject=KlienKu"><span>Contact</span><b>hello@kasahkod.cc</b></a>
+    </div>
+    <p class="foot">KlienKu · { kasah kod }</p>`);
+}
+
+const PAGES = { account: ["Account", accountPage], notifications: ["Notifications", notificationsPage], about: ["About", aboutPage] };
+
+export async function settingsView(root, { id } = {}, { back } = {}){
+  root.onclick = e=>{ if (e.target.closest('[data-act="back"]')) back("/settings"); };
+  if (PAGES[id]){
+    const [title, page] = PAGES[id];
+    root.innerHTML = subHead(title);
+    return page(root);
+  }
+  // the menu: each row says what's set inside
+  root.innerHTML = `<header class="head"><h1>Settings</h1></header><div class="loading">Loading…</div>`;
+  let s, user, on;
+  try { [s, user, on] = await Promise.all([loadSettings(), currentUser(), deviceOn().catch(()=>false)]); }
+  catch(e){ return problem(root.querySelector(".loading"), e, ()=>settingsView(root, {}, { back })); }
+  syncZone(s);
+  const row = (path, ic, label, sub) => `<a class="srow menu" href="/settings/${path}" data-link>
+    <i class="ico">${icon(ic)}</i><span>${label}${sub ? `<small>${esc(sub)}</small>` : ""}</span>${icon("chevron")}</a>`;
+  const device = pushState()==="ready" && on ? "On" : "Off";
+  root.querySelector(".loading").outerHTML = `<div class="group">
+      ${row("account", "user", "Account", user ? (user.name ? `${user.name} · ${user.email}` : user.email) : "")}
+      ${row("notifications", "bell", "Notifications", `${device} on this device · ${s.morning_summary ? `summary ${clock(s.summary_time)}` : "no summary"}`)}
+      ${row("about", "info", "About", "Privacy, terms and contact")}
+    </div>
+    <p class="foot">KlienKu · { kasah kod }</p>`;
 }

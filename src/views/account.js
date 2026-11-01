@@ -1,10 +1,71 @@
-/* Account sheets opened from Settings: change password, download my data (CSV), and
-   delete my account (type DELETE to confirm). */
+/* Settings → Account (/settings/account): name, phone, email, change password, download
+   my data (CSV), sign out, and delete my account (type DELETE to confirm). */
 import { api, forgetClients } from "../api.js";
+import { currentUser, signOut, updateUser } from "../account.js";
 import { isIOS } from "../pwa.js";
 import { turnOff } from "../push.js";
 import { closeSheet, openSheet } from "../sheets.js";
-import { esc, toast } from "../ui.js";
+import { esc, icon, problem, toast } from "../ui.js";
+
+const FIELDS = {
+  name: { label: "Name", type: "text", max: 100, auto: "name", hint: "e.g. Amin Rahman" },
+  phone: { label: "Phone", type: "tel", max: 30, auto: "tel", hint: "e.g. 012-345 6789" },
+};
+
+/* Edit one profile field in a sheet; leaving it empty clears it. */
+function fieldSheet(key, value, onSaved){
+  const f = FIELDS[key];
+  const sheet = openSheet(`
+    <h2>${f.label}</h2>
+    <form novalidate>
+      <input class="note" name="v" type="${f.type}" value="${esc(value)}" placeholder="${f.hint}" maxlength="${f.max}" autocomplete="${f.auto}">
+      <button class="btn btn-primary btn-lg">Save</button>
+    </form>
+    <button type="button" class="link center" data-close>Cancel</button>`);
+  const form = sheet.querySelector("form"), input = form.elements.v;
+  form.addEventListener("submit", async e=>{
+    e.preventDefault();
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    try { const user = await updateUser({ [key]: input.value.trim() }); closeSheet(); toast("Saved"); onSaved(user); }
+    catch(err){ toast(err.message, true); btn.disabled = false; }
+  });
+  input.focus();
+}
+
+export async function accountPage(root){
+  root.insertAdjacentHTML("beforeend", `<div class="loading">Loading…</div>`);
+  const user = await currentUser();
+  if (!user) return problem(root.querySelector(".loading"), new Error("offline"), ()=>location.reload());
+  const value = key => user[key] ? `<b>${esc(user[key])}</b>` : `<b class="unset">Add</b>`;
+  root.querySelector(".loading").outerHTML = `<div class="account">
+    <div class="group">
+      <button type="button" class="srow" data-field="name"><span>Name</span>${value("name")}${icon("chevron")}</button>
+      <button type="button" class="srow" data-field="phone"><span>Phone</span>${value("phone")}${icon("chevron")}</button>
+      <div class="srow"><span>Email</span><b>${esc(user.email)}</b></div>
+    </div>
+    <div class="group gap">
+      <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
+      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your leads and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
+      <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
+    </div>
+    <p class="label">Danger zone</p>
+    <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
+      <span>Removes your account and all your leads for good.</span></button>
+  </div>`;
+  const box = root.querySelector(".account");
+  box.querySelectorAll("[data-field]").forEach(b=>b.addEventListener("click", ()=>fieldSheet(b.dataset.field, user[b.dataset.field], u=>{
+    Object.assign(user, u);
+    b.querySelector("b").outerHTML = value(b.dataset.field);
+  })));
+  box.querySelector('[data-act="password"]').addEventListener("click", passwordSheet);
+  box.querySelector('[data-act="download"]').addEventListener("click", downloadSheet);
+  box.querySelector('[data-act="delete"]').addEventListener("click", ()=>deleteSheet(user.email));
+  box.querySelector('[data-act="signout"]').addEventListener("click", async ()=>{
+    try { await turnOff().catch(()=>{}); await signOut(); forgetClients(); location.replace("/signin"); }
+    catch(e){ toast("Couldn't sign out. Check your connection and try again.", true); }
+  });
+}
 
 /* Better Auth routes under /api/auth (worker/auth.js). */
 async function auth(path, body){
@@ -19,7 +80,7 @@ async function auth(path, body){
   return d;
 }
 
-export function passwordSheet(){
+function passwordSheet(){
   const sheet = openSheet(`
     <h2>Change password</h2>
     <p class="sub">Your other devices will be signed out. This one stays signed in.</p>
@@ -58,7 +119,7 @@ export function passwordSheet(){
 
 /* Gets the file first, then saves it on the tap (iPhone's share sheet needs a fresh tap):
    iPhone/iPad → share sheet (Save to Files, AirDrop, Mail…); Mac → Downloads. */
-export function downloadSheet(){
+function downloadSheet(){
   const sheet = openSheet(`
     <h2>Download my data</h2>
     <p class="sub">All your leads and their history, as a spreadsheet file you can open in Numbers, Excel or Google Sheets.</p>
@@ -89,7 +150,7 @@ export function downloadSheet(){
   });
 }
 
-export function deleteSheet(email){
+function deleteSheet(email){
   const sheet = openSheet(`
     <h2>Delete my account</h2>
     <p class="sub">This deletes your account (${esc(email)}) and everything in it for good: all your leads, their

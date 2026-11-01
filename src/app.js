@@ -1,6 +1,6 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
    /  Today · /dashboard · /leads  list · /leads/new  add · /leads/:id  detail ·
-   /leads/:id/edit  edit · /settings  (old /clients… links go to /leads…)
+   /leads/:id/edit  edit · /settings (+ /account, /notifications, /about)  (old /clients… links go to /leads…)
    Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar and + button. */
 import { registerSW } from "./pwa.js";
 import { refreshDevice } from "./push.js";
@@ -28,7 +28,7 @@ const ROUTES = [
   [/^\/leads\/new$/, addView, {}],
   [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
   [/^\/leads\/([\w-]+)$/, leadView, {}],
-  [/^\/settings$/, settingsView, { tabs: true }],
+  [/^\/settings(?:\/(account|notifications|about))?$/, settingsView, { tabs: true }],
   [/./, notFound, {}],
 ];
 
@@ -61,12 +61,13 @@ function render(){
   tabbar.hidden = wide || !hit.opts.tabs;
   fab.hidden = wide || !hit.opts.fab;
   document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
-  tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===path));
   // a lead page opened from Today or the Dashboard keeps that item lit in the sidebar
   const from = history.state && history.state.from;
-  const section = path.startsWith("/leads/") && (from==="/" || from==="/dashboard") ? from : path.startsWith("/leads") ? "/leads" : path;
+  const section = path.startsWith("/leads/") && (from==="/" || from==="/dashboard") ? from : path.startsWith("/leads") ? "/leads"
+    : path.startsWith("/settings") ? "/settings" : path;
+  tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
   side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
-  view.className = "view v-" + (path==="/" ? "today" : path==="/dashboard" ? "dash" : path==="/leads" ? "leads" : path==="/settings" ? "settings" : "page");
+  view.className = "view v-" + (path==="/" ? "today" : path==="/dashboard" ? "dash" : path==="/leads" ? "leads" : path.startsWith("/settings") ? "settings" : "page");
   view.scrollTop = 0; window.scrollTo(0, 0);
   hit.fn(view, { id: hit.m[1] }, { go, back });
   sideCounts();

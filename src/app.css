@@ -461,3 +461,9 @@ body.is-offline .view{ padding-top:calc(env(safe-area-inset-top) + 52px); }
 .sheet .pw .btn-lg{ margin-top:6px; }
 .delete-account .field{ margin:4px 0 14px; }
 a.srow{ text-decoration:none; }
+/* Settings menu and pages */
+.srow.menu{ gap:12px; padding-top:10px; padding-bottom:10px; }
+.srow.menu .ico{ width:34px; height:34px; border-radius:9px; }
+.srow.menu .ico .ic{ width:19px; height:19px; color:var(--accent); }
+.srow b.unset{ color:var(--accent); font-weight:500; }
+.group.gap{ margin-top:16px; }
