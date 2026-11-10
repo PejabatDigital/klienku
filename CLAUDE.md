@@ -299,7 +299,8 @@ interaction log. Build the base, then add to it.
   stay in D1 untouched and aren't shown. The reminders cron is removed.
 - API (`worker/api.js`): `GET /api/leads` → `{leads, lists, sheet_url}`; `POST /api/leads` (new
   row after the last one; Date = today in Malaysia, Status = first in the list); `PATCH
-  /api/leads/:id` (only the fields sent); `DELETE /api/account`. Writes are typed cells via
+  /api/leads/:id` (only the fields sent); `DELETE /api/leads/:id` (removes the row);
+  `DELETE /api/account`. Writes are typed cells via
   `updateCells` (`userEnteredValue` only: text stays text, dates are serials, the sheet's
   formats/dropdowns stay; column D is skipped). Choices must be in the Lists tab.
 - App: menu Leads · Settings. `/` (and `/leads`) the list: Active / Closed, search, phone
@@ -314,7 +315,14 @@ Phases (one at a time, each confirmed by Amin):
 - ✅ **V3.2 Add and edit** — confirmed by Amin 10 Nov 2026 (live). Add lead (+ on the phone, Add lead in the sidebar) writes a new row;
   Edit (`src/views/form.js`, all columns incl. Last contacted / Date added, Stopped reason
   when Closed) sends only what changed; the profile's Status saves straight away, and
-  closing (not Won) asks for the Stopped reason (optional). No delete: remove the row in the sheet.
+  closing (not Won) asks for the Stopped reason (optional).
+- **V3.3 Delete + slide-away menu** (asked by Amin 10 Nov 2026):
+  - Delete lead: a red link at the bottom of Edit, then a confirm dialog; the Worker removes
+    the lead's whole row from the sheet (`deleteDimension`), the app drops it from `kk:leads`.
+  - Mac sidebar: a button by the logo hides it to icons only (72 px, names on hover) and
+    shows it again; the choice stays on the device (`kk:side-min`). Width is `--side-w`.
+  - Later (with the menu/Settings rework): "Open in Google Sheets" in one place you
+    navigate to, not on every lead page and the sidebar.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

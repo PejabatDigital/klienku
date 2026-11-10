@@ -37,3 +37,11 @@ export function keepLead(lead){
   try { localStorage.setItem(CACHE, JSON.stringify(sheet)); } catch(e){}
   window.dispatchEvent(new Event("klienku:leads"));
 }
+
+/* Takes a deleted lead out of the device's copy. */
+export function dropLead(id){
+  if (!sheet) return;
+  sheet = { ...sheet, leads: sheet.leads.filter(l=>l.id!==id) };
+  try { localStorage.setItem(CACHE, JSON.stringify(sheet)); } catch(e){}
+  window.dispatchEvent(new Event("klienku:leads"));
+}

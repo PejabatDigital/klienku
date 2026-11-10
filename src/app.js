@@ -72,6 +72,21 @@ function sideCounts(){
   if (sheet){ foot.href = sheet.sheet_url; foot.hidden = false; }
 }
 window.addEventListener("klienku:leads", sideCounts);
+
+/* Mac: the sidebar slides in to icons only (more room for the table) and stays that way
+   on this device until it's opened again. */
+const SIDE = "kk:side-min", toggle = document.getElementById("sideToggle");
+function sideMin(on, save = true){
+  document.body.classList.toggle("side-min", on);
+  const label = on ? "Show menu" : "Hide menu";
+  toggle.setAttribute("aria-label", label); toggle.title = label;
+  // icons only: their names show on hover
+  side.querySelectorAll("a[aria-label]").forEach(a=>{ if (on) a.title = a.getAttribute("aria-label"); else a.removeAttribute("title"); });
+  if (save) try { on ? localStorage.setItem(SIDE, "1") : localStorage.removeItem(SIDE); } catch(e){}
+}
+try { sideMin(localStorage.getItem(SIDE)==="1", false); } catch(e){}
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add("side-anim"))); // no slide on first load
+toggle.addEventListener("click", ()=>sideMin(!document.body.classList.contains("side-min")));
 matchMedia("(min-width: 1024px)").addEventListener("change", ()=>{ if (!document.querySelector(".layer")) render(); });
 
 document.addEventListener("click", e=>{

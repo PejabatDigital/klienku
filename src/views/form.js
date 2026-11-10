@@ -1,8 +1,9 @@
 /* Add lead (Figma 5) and Edit lead (Figma 9), written straight into the Google Sheet. Only
    the name is needed. The choices (status, project type, source, stopped reason) come from
    the sheet's Lists tab. Editing sends only what changed, so a change made in the sheet
-   meanwhile isn't overwritten. */
-import { api, cachedSheet, keepLead, loadSheet } from "../api.js";
+   meanwhile isn't overwritten. Delete (at the bottom of Edit) removes the lead's row. */
+import { api, cachedSheet, dropLead, keepLead, loadSheet } from "../api.js";
+import { confirmDialog } from "../sheets.js";
 import { isClosed, isDate } from "../leads.js";
 import { esc, gone, icon, pills, problem, toast, wirePills } from "../ui.js";
 
@@ -117,10 +118,24 @@ export async function editView(root, { id }, ctx){
       <nav class="topbar"><button type="button" class="link" data-act="cancel">Cancel</button><b>Edit lead</b><button class="link strong">Save</button></nav>
       ${fields(l, sheet.lists, true)}
       <button class="btn btn-primary btn-lg">Save changes</button>
-      <p class="hint">To remove a lead for good, delete its row in the Google Sheet.</p>
+      <button type="button" class="link center danger-link" data-act="delete">Delete lead</button>
     </form>`;
   const form = root.querySelector("form"), pick = wire(form);
   form.querySelector('[data-act="cancel"]').addEventListener("click", ()=>back(`/leads/${id}`));
+  form.querySelector('[data-act="delete"]').addEventListener("click", async ()=>{
+    const ok = await confirmDialog({ title: `Delete ${l.name || "this lead"}?`,
+      text: "Their row is removed from the Google Sheet. This can't be undone here." });
+    if (!ok) return;
+    busy(form, true);
+    try {
+      await api(`/leads/${id}`, { method: "DELETE" });
+      dropLead(id); toast("Lead deleted");
+      ctx.go("/", { replace: true });
+    } catch(err){
+      toast(err.message, true); busy(form, false);
+      if (err.status===404){ dropLead(id); ctx.go("/", { replace: true }); }
+    }
+  });
   form.addEventListener("submit", async e=>{
     e.preventDefault();
     const all = read(form, pick, l), body = {};

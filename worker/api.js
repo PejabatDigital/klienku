@@ -6,6 +6,7 @@
    GET    /api/leads       every lead, the lists and the sheet's link: {leads, lists, sheet_url}
    POST   /api/leads       add a lead as a new row at the bottom (only the name is needed): {lead}
    PATCH  /api/leads/:id   change some of a lead's fields; only the fields sent are written: {lead}
+   DELETE /api/leads/:id   delete the lead: its whole row is removed from the sheet: {ok}
    DELETE /api/account     delete the signed-in user and what KlienKu keeps for them (not the sheet)
 
    Writes are typed cells (text stays text, so 012… keeps its 0; dates are real dates), and
@@ -160,6 +161,18 @@ export async function handleApi(request, env, user){
       const f = clean(b, s.lists, lead);
       await writeRow(env, s.head, lead.row, f);
       return json({ lead: { ...lead, ...f } });
+    }
+
+    // the row goes, so the rows below move up (the WhatsApp formula in D1 follows by itself)
+    if (one && method==="DELETE"){
+      const s = await readSheet(env);
+      const lead = s.leads.find(l=>l.id===one[1]);
+      if (!lead) return json({ error: "Lead not found. It may have been removed from the Google Sheet already." }, 404);
+      const sheetId = await gid(env);
+      await sheets(env, ":batchUpdate", { method: "POST", body: { requests: [
+        { deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex: lead.row - 1, endIndex: lead.row } } },
+      ] } });
+      return json({ ok: true });
     }
 
     // everything KlienKu keeps for them, then the account; the session goes too, so they're signed out
