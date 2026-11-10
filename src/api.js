@@ -29,3 +29,11 @@ export async function loadSheet(){
   return sheet;
 }
 export function forgetSheet(){ sheet = null; try { localStorage.removeItem(CACHE); } catch(e){} }
+
+/* Puts a saved lead into the device's copy (replacing the old one, or adding a new one). */
+export function keepLead(lead){
+  if (!sheet) return;
+  sheet = { ...sheet, leads: sheet.leads.filter(l=>l.id!==lead.id).concat(lead) };
+  try { localStorage.setItem(CACHE, JSON.stringify(sheet)); } catch(e){}
+  window.dispatchEvent(new Event("klienku:leads"));
+}

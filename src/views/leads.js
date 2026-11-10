@@ -138,7 +138,7 @@ export async function leadsView(root, params, ctx){
     box.classList.toggle("open", !!id);
     pane.hidden = !id;
     root.querySelectorAll("tr[data-id]").forEach(r=>r.classList.toggle("sel", r.dataset.id===id));
-    if (id) leadView(pane, { id }, ctx, { embedded: true, onClose: ()=>open(null) });
+    if (id) leadView(pane, { id }, ctx, { embedded: true, onClose: ()=>open(null), onChange: ()=>{ sheet = cachedSheet(); redraw(); } });
   };
 
   box.querySelector(".search input").addEventListener("input", e=>{ view.q = e.target.value.trim(); keep(); redraw(); });

@@ -18,9 +18,11 @@
 <link rel="stylesheet" href="/src/app.css">
 </head>
 <body>
-<!-- Mac and wide screens (≥ 1024 px): sidebar in place of the tab bar -->
+<!-- Mac and wide screens (≥ 1024 px): sidebar in place of the tab bar and + button -->
 <aside class="side" id="side" aria-label="KlienKu">
   <div class="side-brand"><img src="/icons/icon.svg" alt="" width="32" height="32"><span>Klien<b>Ku</b></span></div>
+  <a class="btn btn-primary side-add" href="/leads/new" data-link>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add lead</a>
   <nav class="side-nav">
     <a href="/" data-link data-tab="/">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Leads<em id="countLeads"></em></a>
@@ -35,6 +37,10 @@
 
 <p class="offline-bar" id="offlineBar" role="status" hidden>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/></svg>Offline · showing what's saved on this device</p>
+
+<a class="fab" id="fab" href="/leads/new" data-link aria-label="Add a lead" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</a>
 
 <nav class="tabbar" id="tabbar" aria-label="Main" hidden>
   <a href="/" data-link data-tab="/">

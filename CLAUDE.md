@@ -297,7 +297,11 @@ interaction log. Build the base, then add to it.
   is shared with its email as Editor. `worker/google.js` signs a JWT with Web Crypto (no
   library), token kept in memory. D1 now only keeps sign-in (Better Auth); the old V2 leads
   stay in D1 untouched and aren't shown. The reminders cron is removed.
-- API (`worker/api.js`): `GET /api/leads` → `{leads, lists, sheet_url}`; `DELETE /api/account`.
+- API (`worker/api.js`): `GET /api/leads` → `{leads, lists, sheet_url}`; `POST /api/leads` (new
+  row after the last one; Date = today in Malaysia, Status = first in the list); `PATCH
+  /api/leads/:id` (only the fields sent); `DELETE /api/account`. Writes are typed cells via
+  `updateCells` (`userEnteredValue` only: text stays text, dates are serials, the sheet's
+  formats/dropdowns stay; column D is skipped). Choices must be in the Lists tab.
 - App: menu Leads · Settings. `/` (and `/leads`) the list: Active / Closed, search, phone
   cards grouped by status, Mac table with Status/Project/Source filters and a sort, lead in a
   right panel. `/leads/:id` the profile: WhatsApp / Call, status, next action + follow-up
@@ -306,8 +310,11 @@ interaction log. Build the base, then add to it.
   Helpers in `src/leads.js`; the list is cached on the device (`kk:leads`).
 
 Phases (one at a time, each confirmed by Amin):
-- **V3.1 Connect and view** (read only): service account, list + profile from the sheet.
-- **V3.2 Add and edit**: Add lead writes a new row; the profile can be edited.
+- ✅ **V3.1 Connect and view** (read only) — confirmed by Amin 10 Nov 2026 (live).
+- **V3.2 Add and edit**: Add lead (+ on the phone, Add lead in the sidebar) writes a new row;
+  Edit (`src/views/form.js`, all columns incl. Last contacted / Date added, Stopped reason
+  when Closed) sends only what changed; the profile's Status saves straight away, and
+  closing (not Won) asks for the Stopped reason (optional). No delete: remove the row in the sheet.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

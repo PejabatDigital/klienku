@@ -1,7 +1,8 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
-   / (and /leads)  the leads from the Google Sheet · /leads/:id  a lead's profile ·
-   /settings (+ /account, /about). Old links (/dashboard, /clients…) go to the leads.
-   Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar. */
+   / (and /leads)  the leads from the Google Sheet · /leads/new  add · /leads/:id  a lead's
+   profile · /leads/:id/edit  edit · /settings (+ /account, /about). Old links (/dashboard,
+   /clients…) go to the leads. Wide screens (≥ 1024 px, see isWide) get the sidebar instead
+   of the tab bar and + button. */
 import { registerSW } from "./pwa.js";
 import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
@@ -10,13 +11,16 @@ import { isClosed } from "./leads.js";
 import { icon, isWide } from "./ui.js";
 import { leadsView } from "./views/leads.js";
 import { leadView } from "./views/lead.js";
+import { addView, editView } from "./views/form.js";
 import { settingsView } from "./views/settings.js";
 
 const view = document.getElementById("view");
-const tabbar = document.getElementById("tabbar"), side = document.getElementById("side");
+const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab"), side = document.getElementById("side");
 
 const ROUTES = [
-  [/^\/(?:leads)?$/, leadsView, { tabs: true }],
+  [/^\/(?:leads)?$/, leadsView, { tabs: true, fab: true }],
+  [/^\/leads\/new$/, addView, {}],
+  [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
   [/^\/leads\/([\w-]+)$/, leadView, {}],
   [/^\/settings(?:\/(account|about))?$/, settingsView, { tabs: true }],
   [/./, notFound, {}],
@@ -43,15 +47,16 @@ function back(fallback){
 
 function render(){
   closeSheet();
-  if (/^\/(clients|dashboard|leads\/new)(\/|$)|\/edit$|^\/settings\/notifications$/.test(location.pathname))
+  if (/^\/(clients|dashboard)(\/|$)|^\/settings\/notifications$/.test(location.pathname))
     history.replaceState(history.state, "", location.pathname.startsWith("/settings") ? "/settings" : "/");
   const path = location.pathname.replace(/\/+$/, "") || "/";
   const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
   const wide = isWide();
   document.body.classList.toggle("wide", wide);
   tabbar.hidden = wide || !hit.opts.tabs;
+  fab.hidden = wide || !hit.opts.fab;
   document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
-  const section = path.startsWith("/settings") ? "/settings" : path==="/" || path.startsWith("/leads") ? "/" : path;
+  const section = path.startsWith("/settings") ? "/settings" : path==="/leads/new" ? "" : path==="/" || path.startsWith("/leads") ? "/" : path;
   tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
   side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
   view.className = "view v-" + (path==="/" || path==="/leads" ? "leads" : path.startsWith("/settings") ? "settings" : "page");
