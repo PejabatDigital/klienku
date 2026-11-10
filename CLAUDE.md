@@ -311,7 +311,7 @@ interaction log. Build the base, then add to it.
 
 Phases (one at a time, each confirmed by Amin):
 - ✅ **V3.1 Connect and view** (read only) — confirmed by Amin 10 Nov 2026 (live).
-- **V3.2 Add and edit**: Add lead (+ on the phone, Add lead in the sidebar) writes a new row;
+- ✅ **V3.2 Add and edit** — confirmed by Amin 10 Nov 2026 (live). Add lead (+ on the phone, Add lead in the sidebar) writes a new row;
   Edit (`src/views/form.js`, all columns incl. Last contacted / Date added, Stopped reason
   when Closed) sends only what changed; the profile's Status saves straight away, and
   closing (not Won) asks for the Stopped reason (optional). No delete: remove the row in the sheet.
