@@ -1,8 +1,7 @@
-/* Settings → Account (/settings/account): name, phone, email, change password, download
-   my data (CSV), sign out, and delete my account (type DELETE to confirm). */
-import { api, forgetClients } from "../api.js";
+/* Settings → Account (/settings/account): name, phone, email, change password, the Google
+   Sheet, sign out, and delete my account (type DELETE to confirm). */
+import { api, cachedSheet, forgetSheet } from "../api.js";
 import { currentUser, signOut, updateUser } from "../account.js";
-import { isIOS } from "../pwa.js";
 import { turnOff } from "../push.js";
 import { closeSheet, openSheet } from "../sheets.js";
 import { esc, icon, problem, toast } from "../ui.js";
@@ -37,6 +36,7 @@ export async function accountPage(root){
   root.insertAdjacentHTML("beforeend", `<div class="loading">Loading…</div>`);
   const user = await currentUser();
   if (!user) return problem(root.querySelector(".loading"), new Error("offline"), ()=>location.reload());
+  const sheet = cachedSheet();
   const value = key => user[key] ? `<b>${esc(user[key])}</b>` : `<b class="unset">Add</b>`;
   root.querySelector(".loading").outerHTML = `<div class="account">
     <div class="group">
@@ -46,12 +46,12 @@ export async function accountPage(root){
     </div>
     <div class="group gap">
       <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
-      <button type="button" class="srow" data-act="download"><span>Download my data<small>Your leads and their history, as a spreadsheet</small></span>${icon("chevron")}</button>
+      ${sheet ? `<a class="srow" href="${esc(sheet.sheet_url)}" target="_blank" rel="noopener"><span>Google Sheet<small>Renovasi KL Leads, where your leads are kept</small></span>${icon("chevron")}</a>` : ""}
       <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
     </div>
     <p class="label">Danger zone</p>
     <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
-      <span>Removes your account and all your leads for good.</span></button>
+      <span>Removes your KlienKu account. Your leads stay in the Google Sheet.</span></button>
   </div>`;
   const box = root.querySelector(".account");
   box.querySelectorAll("[data-field]").forEach(b=>b.addEventListener("click", ()=>fieldSheet(b.dataset.field, user[b.dataset.field], u=>{
@@ -59,10 +59,9 @@ export async function accountPage(root){
     b.querySelector("b").outerHTML = value(b.dataset.field);
   })));
   box.querySelector('[data-act="password"]').addEventListener("click", passwordSheet);
-  box.querySelector('[data-act="download"]').addEventListener("click", downloadSheet);
   box.querySelector('[data-act="delete"]').addEventListener("click", ()=>deleteSheet(user.email));
   box.querySelector('[data-act="signout"]').addEventListener("click", async ()=>{
-    try { await turnOff().catch(()=>{}); await signOut(); forgetClients(); location.replace("/signin"); }
+    try { await turnOff().catch(()=>{}); await signOut(); forgetSheet(); location.replace("/signin"); }
     catch(e){ toast("Couldn't sign out. Check your connection and try again.", true); }
   });
 }
@@ -117,45 +116,11 @@ function passwordSheet(){
   f("current").focus();
 }
 
-/* Gets the file first, then saves it on the tap (iPhone's share sheet needs a fresh tap):
-   iPhone/iPad → share sheet (Save to Files, AirDrop, Mail…); Mac → Downloads. */
-function downloadSheet(){
-  const sheet = openSheet(`
-    <h2>Download my data</h2>
-    <p class="sub">All your leads and their history, as a spreadsheet file you can open in Numbers, Excel or Google Sheets.</p>
-    <button class="btn btn-primary btn-lg" data-act="save" disabled>Preparing…</button>
-    <button type="button" class="link center" data-close>Cancel</button>`);
-  const btn = sheet.querySelector('[data-act="save"]');
-  let file;
-  (async ()=>{
-    try {
-      const r = await fetch("/api/export");
-      if (r.status===401) return location.replace("/signin");
-      if (!r.ok) throw new Error();
-      const name = (/filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "") || [])[1] || "klienku-leads.csv";
-      file = new File([await r.blob()], name, { type: "text/csv" });
-      btn.disabled = false; btn.textContent = "Save file";
-    } catch(e){ btn.textContent = navigator.onLine ? "Couldn't prepare it. Try again later." : "You're offline"; }
-  })();
-  btn.addEventListener("click", async ()=>{
-    if (!file) return;
-    if (isIOS() && navigator.canShare && navigator.canShare({ files: [file] })){
-      try { await navigator.share({ files: [file] }); closeSheet(); return; }
-      catch(e){ if (e.name==="AbortError") return; }
-    }
-    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(file), download: file.name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 10_000);
-    closeSheet(); toast("Saved to Downloads");
-  });
-}
-
 function deleteSheet(email){
   const sheet = openSheet(`
     <h2>Delete my account</h2>
-    <p class="sub">This deletes your account (${esc(email)}) and everything in it for good: all your leads, their
-      history and your settings. Reminders stop on every device. It can't be undone.</p>
-    <p class="sub">Want a copy first? Use Download my data.</p>
+    <p class="sub">This deletes your KlienKu account (${esc(email)}) for good. It can't be undone.
+      Your leads aren't touched: they stay in the Google Sheet.</p>
     <label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE"></label>
     <button class="btn btn-danger btn-lg" data-act="delete" disabled>Delete my account</button>
     <button type="button" class="link center" data-close>Cancel</button>`, "delete-account");
@@ -168,7 +133,7 @@ function deleteSheet(email){
       await api("/account", { method: "DELETE" });
     } catch(e){ toast(e.message, true); btn.disabled = input.disabled = false; return; }
     // clear this device too
-    forgetClients();
+    forgetSheet();
     try { Object.keys(localStorage).filter(k=>k.startsWith("kk:")).forEach(k=>localStorage.removeItem(k)); sessionStorage.clear(); } catch(e){}
     location.replace("/signin");
   });

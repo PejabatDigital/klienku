@@ -1,6 +1,7 @@
-/* Talking to the Worker. Signed out (401) → the sign-in page. The client list is kept on
-   this device too, so screens open instantly and show something offline. */
-const CACHE = "kk:clients";
+/* Talking to the Worker. Signed out (401) → the sign-in page. The leads (with the sheet's
+   lists and link) are kept on this device too, so screens open instantly and show
+   something offline. */
+const CACHE = "kk:leads";
 
 export async function api(path, { method = "GET", body } = {}){
   let r;
@@ -16,36 +17,15 @@ export async function api(path, { method = "GET", body } = {}){
   return data;
 }
 
-let clients = null, settings = null;
-try { clients = JSON.parse(localStorage.getItem(CACHE)); } catch(e){}
-/* Saves the list on this device and tells the app it changed (sidebar counts). */
-const keep = () => {
-  try { localStorage.setItem(CACHE, JSON.stringify(clients)); } catch(e){}
-  window.dispatchEvent(new Event("klienku:clients"));
-};
+/* {leads, lists, sheet_url} from the Google Sheet, or null before the first load. */
+let sheet = null;
+try { sheet = JSON.parse(localStorage.getItem(CACHE)); localStorage.removeItem("kk:clients"); } catch(e){}
 
-export const cachedClients = () => clients;
-export async function loadClients(){
-  clients = (await api("/clients")).clients;
-  keep();
-  return clients;
+export const cachedSheet = () => sheet;
+export async function loadSheet(){
+  sheet = await api("/leads");
+  try { localStorage.setItem(CACHE, JSON.stringify(sheet)); } catch(e){}
+  window.dispatchEvent(new Event("klienku:leads"));
+  return sheet;
 }
-/* Puts a changed client into the list (or removes it when `gone`). */
-export function updateClient(client, gone = false){
-  if (!clients) return;
-  const old = clients.find(c=>c.id===client.id);
-  clients = clients.filter(c=>c.id!==client.id);
-  if (!gone) clients.push({ last_contact: old && old.last_contact, ...client });
-  keep();
-}
-export function forgetClients(){ clients = null; try { localStorage.removeItem(CACHE); } catch(e){} }
-
-export async function loadSettings(){
-  if (!settings) settings = (await api("/settings")).settings;
-  return settings;
-}
-export async function saveSettings(change){
-  settings = (await api("/settings", { method: "PUT", body: change })).settings;
-  window.dispatchEvent(new Event("klienku:settings"));
-  return settings;
-}
+export function forgetSheet(){ sheet = null; try { localStorage.removeItem(CACHE); } catch(e){} }

@@ -1,6 +1,6 @@
 /* Small building blocks shared by the screens: escaping, icons, lead cards, toasts. */
-import { dueShort, status } from "./dates.js";
-import { followUpText, isActive, statusLabel } from "./flow.js";
+import { dueShort } from "./dates.js";
+import { isDate, leadState, statusName } from "./leads.js";
 
 /* Mac and wide screens: sidebar layout, list and detail side by side, leads as a table. */
 export const isWide = () => matchMedia("(min-width: 1024px)").matches;
@@ -28,23 +28,23 @@ const PATHS = {
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
   archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
 };
 export const icon = (name, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name]}</svg>`;
 
-/* The card colour: overdue | today | upcoming | none (no follow-up), or won | closed. */
-export const cardState = c => !isActive(c) ? (c.stage==="won" ? "won" : "closed") : c.next_due ? status(c.next_due) : "none";
-
-/* A lead card for Today and the Leads list. */
-export function card(c){
-  const s = cardState(c), active = isActive(c);
-  const sub = [c.project_type, c.area].filter(Boolean).join(" · ");
-  const right = !active ? statusLabel(c.stage) : c.next_due ? dueShort(c.next_due) : "No follow-up";
-  const chips = active
-    ? (c.next_due ? `<span class="chip chip-${s}">${icon("clock")}${esc(followUpText(c))}</span>` : "") + `<span class="chip chip-stage">${esc(statusLabel(c.stage))}</span>`
-    : c.close_reason ? `<span class="chip chip-stage">${esc(c.close_reason)}</span>` : "";
-  return `<a class="ccard s-${s}" href="/leads/${c.id}" data-link>
-    <div class="ccard-top"><b>${esc(c.name)}</b><span class="due">${esc(right)}</span></div>
+/* A lead card for the Leads list: name, follow-up date, project · location, then the next
+   action and status (closed leads: the reason). */
+export function card(l){
+  const s = leadState(l), closed = s==="closed" || s==="won";
+  const sub = [l.type, l.location].filter(Boolean).join(" · ");
+  const right = closed ? statusName(l.status) : isDate(l.follow_up) ? dueShort(l.follow_up) : "No follow-up";
+  const chips = closed
+    ? (l.reason ? `<span class="chip chip-stage">${esc(l.reason)}</span>` : "")
+    : (l.next_action ? `<span class="chip chip-${s==="none" ? "plain" : s}">${icon("clock")}${esc(l.next_action)}</span>` : "")
+      + `<span class="chip chip-stage">${esc(statusName(l.status))}</span>`;
+  return `<a class="ccard s-${s}" href="/leads/${l.id}" data-link>
+    <div class="ccard-top"><b>${esc(l.name || "No name")}</b><span class="due">${esc(right)}</span></div>
     ${sub ? `<div class="ccard-sub">${esc(sub)}</div>` : ""}
     ${chips ? `<div class="ccard-chips">${chips}</div>` : ""}
   </a>`;
@@ -74,7 +74,7 @@ export function problem(root, e, retry){
 
 /* A lead that's no longer there (deleted, or a wrong link). */
 export const gone = root => { root.innerHTML = `<div class="empty small">${icon("search_off")}<h2>Lead not found</h2>
-  <p>This lead may have been deleted.</p><a class="btn btn-white" href="/leads" data-link>All leads</a></div>`; };
+  <p>It may have been removed from the Google Sheet.</p><a class="btn btn-white" href="/leads" data-link>All leads</a></div>`; };
 
 /* A short message at the bottom of the screen. */
 export function toast(text, isError = false){

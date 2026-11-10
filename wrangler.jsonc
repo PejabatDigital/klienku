@@ -6,9 +6,6 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-10-12",
 
-  // Reminders: every 5 minutes, send what's due (worker/reminders.js).
-  "triggers": { "crons": ["*/5 * * * *"] },
-
   // klienku.kasahkod.cc is created and pointed here on deploy (kasahkod.cc is on this account).
   "routes": [
     { "pattern": "klienku.kasahkod.cc", "custom_domain": true }
@@ -28,9 +25,12 @@
   },
 
   // Secrets, set with `npx wrangler secret put <NAME>` (or .dev.vars locally), never here:
-  // VAPID_PRIVATE_KEY (Web Push), BETTER_AUTH_SECRET (sign-in), RESEND_API_KEY (emails).
+  // VAPID_PRIVATE_KEY (Web Push), BETTER_AUTH_SECRET (sign-in), RESEND_API_KEY (emails),
+  // GOOGLE_SERVICE_ACCOUNT (the service account's JSON key, for the Google Sheet).
   // OPEN_SIGNUP "false": only the first account can be created (Amin's).
+  // SHEET_ID: the Google Sheet "Renovasi KL Leads", the master copy of the leads.
   "vars": {
+    "SHEET_ID": "1fi96M7Qxqc_-0tWn3zPCCykheXq3UgFelGdbNspMdsM",
     "BETTER_AUTH_URL": "https://klienku.kasahkod.cc",
     "OPEN_SIGNUP": "false",
     "VAPID_PUBLIC_KEY": "BAlKmwJF13HZZEfeKagylXKmbU0U8aAQ64VwaeigruUz_LmwdTdTPTf7BSblqPrwiDw-SLNEjRzd_jZvJIQqpY4",

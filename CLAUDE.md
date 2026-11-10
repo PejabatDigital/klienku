@@ -6,6 +6,10 @@ forgotten. A Kasah Kod app.
 **Version 2 (decided 31 Oct 2026) changes direction:** a lightweight lead CRM built for
 Renovasi KL. See "Version 2 — lead CRM" below; where it differs from Version 1, Version 2 wins.
 
+**Version 3 (decided 10 Nov 2026): the Google Sheet is the master.** KlienKu is the front
+end for Amin's sheet "Renovasi KL Leads" on phone and Mac. See "Version 3 — Google Sheet
+front end" below; where it differs from Versions 1–2, Version 3 wins.
+
 ## The concept (Version 1, as built in Phases 1–6)
 - Clients come in from WhatsApp enquiries. Amin adds them by hand: name, phone, what they need.
   (Website form → lead is for later.)
@@ -270,6 +274,40 @@ Phases (one at a time, each confirmed by Amin):
   - Name is Better Auth's `user.name`; phone is `user.phone` (Better Auth `additionalFields`,
     `migrations/0007_profile.sql`). Saved with `POST /api/auth/update-user`; the auth hook
     refuses a name over 100 or a phone over 30 characters.
+  - (V2.9 was built and pushed, not confirmed, before Version 3 replaced it.)
+
+## Version 3 — Google Sheet front end
+Why (Amin, 10 Nov 2026): V2 was slower to use than a spreadsheet, so he moved to Google
+Sheets; what he wants is to write down a lead's details, keep them, and look them up. He
+likes KlienKu's lead profile. No frills yet: no reminders, notifications, Today, Dashboard,
+interaction log. Build the base, then add to it.
+
+- Sheet: "Renovasi KL Leads" (`SHEET_ID` in `wrangler.jsonc`), tab **Leads** (one row per
+  lead) and tab **Lists** (dropdowns; headers in row 2: Status, Project Type, Source,
+  Stopped Reason). Amin owns the lists and may change them; the app reads them every load.
+  The sheet's own Dashboard tab was removed (asked by Amin).
+- Leads columns (found by header text, so they can move): Date, Name, Status, WhatsApp
+  (an ARRAYFORMULA in D1 — never write column D), Phone, Source, Project Type, Location,
+  What They Want, Last Contacted, Next Action, Next Follow-up, Stopped Reason, Notes, and a
+  hidden **ID** (column O, added by Claude). The Worker gives any row without an ID one and
+  writes it back, so each lead keeps its link when rows are sorted or moved.
+- Statuses (Amin, 10 Nov 2026): New Lead, Contacting, Qualified, Site Visit, Quotation Sent,
+  Won, Closed. Won and Closed (also Lost/Stopped) = finished, shown under Closed; Won in green.
+- Connection: Google service account, JSON key in secret `GOOGLE_SERVICE_ACCOUNT`; the sheet
+  is shared with its email as Editor. `worker/google.js` signs a JWT with Web Crypto (no
+  library), token kept in memory. D1 now only keeps sign-in (Better Auth); the old V2 leads
+  stay in D1 untouched and aren't shown. The reminders cron is removed.
+- API (`worker/api.js`): `GET /api/leads` → `{leads, lists, sheet_url}`; `DELETE /api/account`.
+- App: menu Leads · Settings. `/` (and `/leads`) the list: Active / Closed, search, phone
+  cards grouped by status, Mac table with Status/Project/Source filters and a sort, lead in a
+  right panel. `/leads/:id` the profile: WhatsApp / Call, status, next action + follow-up
+  date, what they want, source, last contacted, added, phone, notes, Open in Google Sheets
+  (jumps to the row). Settings: Account (Google Sheet link replaces Download my data), About.
+  Helpers in `src/leads.js`; the list is cached on the device (`kk:leads`).
+
+Phases (one at a time, each confirmed by Amin):
+- **V3.1 Connect and view** (read only): service account, list + profile from the sheet.
+- **V3.2 Add and edit**: Add lead writes a new row; the profile can be edited.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

@@ -1,40 +1,30 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
-   /  Today · /dashboard · /leads  list · /leads/new  add · /leads/:id  detail ·
-   /leads/:id/edit  edit · /settings (+ /account, /notifications, /about)  (old /clients… links go to /leads…)
-   Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar and + button. */
+   / (and /leads)  the leads from the Google Sheet · /leads/:id  a lead's profile ·
+   /settings (+ /account, /about). Old links (/dashboard, /clients…) go to the leads.
+   Wide screens (≥ 1024 px, see isWide) get the sidebar instead of the tab bar. */
 import { registerSW } from "./pwa.js";
-import { refreshDevice } from "./push.js";
-import { maybeShowSetup } from "./views/setup.js";
 import { currentUser } from "./account.js";
 import { closeSheet } from "./sheets.js";
-import { cachedClients, loadSettings } from "./api.js";
-import { clock, status } from "./dates.js";
-import { isActive } from "./flow.js";
+import { cachedSheet } from "./api.js";
+import { isClosed } from "./leads.js";
 import { icon, isWide } from "./ui.js";
-import { today } from "./views/today.js";
-import { dashboard } from "./views/dashboard.js";
 import { leadsView } from "./views/leads.js";
 import { leadView } from "./views/lead.js";
-import { addView, editView } from "./views/form.js";
 import { settingsView } from "./views/settings.js";
 
 const view = document.getElementById("view");
-const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab"), side = document.getElementById("side");
+const tabbar = document.getElementById("tabbar"), side = document.getElementById("side");
 
 const ROUTES = [
-  [/^\/$/, today, { tabs: true, fab: true }],
-  [/^\/dashboard$/, dashboard, { tabs: true, fab: true }],
-  [/^\/leads$/, leadsView, { tabs: true, fab: true }],
-  [/^\/leads\/new$/, addView, {}],
-  [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
+  [/^\/(?:leads)?$/, leadsView, { tabs: true }],
   [/^\/leads\/([\w-]+)$/, leadView, {}],
-  [/^\/settings(?:\/(account|notifications|about))?$/, settingsView, { tabs: true }],
+  [/^\/settings(?:\/(account|about))?$/, settingsView, { tabs: true }],
   [/./, notFound, {}],
 ];
 
 function notFound(root){
   root.innerHTML = `<div class="empty">${icon("search_off")}<h2>Page not found</h2>
-    <p>This page doesn't exist. It may be an old or mistyped link.</p><a class="btn btn-primary" href="/" data-link>Go to Today</a></div>`;
+    <p>This page doesn't exist. It may be an old or mistyped link.</p><a class="btn btn-primary" href="/" data-link>Go to Leads</a></div>`;
 }
 
 let depth = 0; // how many in-app pages are behind this one, so Back can use history
@@ -53,40 +43,30 @@ function back(fallback){
 
 function render(){
   closeSheet();
-  if (/^\/clients(\/|$)/.test(location.pathname)) history.replaceState(history.state, "", location.pathname.replace("/clients", "/leads") + location.search);
+  if (/^\/(clients|dashboard|leads\/new)(\/|$)|\/edit$|^\/settings\/notifications$/.test(location.pathname))
+    history.replaceState(history.state, "", location.pathname.startsWith("/settings") ? "/settings" : "/");
   const path = location.pathname.replace(/\/+$/, "") || "/";
   const hit = ROUTES.map(([re, fn, opts])=>({ m: re.exec(path), fn, opts })).find(r=>r.m);
   const wide = isWide();
   document.body.classList.toggle("wide", wide);
   tabbar.hidden = wide || !hit.opts.tabs;
-  fab.hidden = wide || !hit.opts.fab;
   document.body.classList.toggle("has-tabs", !wide && !!hit.opts.tabs);
-  // a lead page opened from Today or the Dashboard keeps that item lit in the sidebar
-  const from = history.state && history.state.from;
-  const section = path.startsWith("/leads/") && (from==="/" || from==="/dashboard") ? from : path.startsWith("/leads") ? "/leads"
-    : path.startsWith("/settings") ? "/settings" : path;
+  const section = path.startsWith("/settings") ? "/settings" : path==="/" || path.startsWith("/leads") ? "/" : path;
   tabbar.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
   side.querySelectorAll("[data-tab]").forEach(a=>a.classList.toggle("on", a.dataset.tab===section));
-  view.className = "view v-" + (path==="/" ? "today" : path==="/dashboard" ? "dash" : path==="/leads" ? "leads" : path.startsWith("/settings") ? "settings" : "page");
+  view.className = "view v-" + (path==="/" || path==="/leads" ? "leads" : path.startsWith("/settings") ? "settings" : "page");
   view.scrollTop = 0; window.scrollTo(0, 0);
   hit.fn(view, { id: hit.m[1] }, { go, back });
   sideCounts();
 }
 
-/* Sidebar badges (due now, active leads) and the morning summary note. */
+/* Sidebar: active leads, and the link to the Google Sheet. */
 function sideCounts(){
-  const clients = cachedClients() || [];
-  const due = clients.filter(c=>c.next_due && status(c.next_due)!=="upcoming").length;
-  document.getElementById("countToday").textContent = due || "";
-  document.getElementById("countLeads").textContent = clients.filter(isActive).length || "";
-  loadSettings().then(s=>{
-    const foot = document.getElementById("sideSummary");
-    foot.querySelector("span").textContent = s.morning_summary ? `Morning summary at ${clock(s.summary_time)}` : "Morning summary off";
-    foot.hidden = false;
-  }).catch(()=>{});
+  const sheet = cachedSheet(), foot = document.getElementById("sideSheet");
+  document.getElementById("countLeads").textContent = sheet ? sheet.leads.filter(l=>!isClosed(l)).length || "" : "";
+  if (sheet){ foot.href = sheet.sheet_url; foot.hidden = false; }
 }
-window.addEventListener("klienku:clients", sideCounts);
-window.addEventListener("klienku:settings", sideCounts);
+window.addEventListener("klienku:leads", sideCounts);
 matchMedia("(min-width: 1024px)").addEventListener("change", ()=>{ if (!document.querySelector(".layer")) render(); });
 
 document.addEventListener("click", e=>{
@@ -98,9 +78,9 @@ document.addEventListener("click", e=>{
   go(path + url.search);
 });
 window.addEventListener("popstate", e=>{ depth = (e.state && e.state.depth) || 0; render(); });
-// coming back to the app later: refresh what's due
+// coming back to the app later: refresh the list (the sheet may have changed)
 document.addEventListener("visibilitychange", ()=>{
-  if (document.visibilityState==="visible" && ["/", "/dashboard", "/leads"].includes(location.pathname) && !document.querySelector(".layer")) render();
+  if (document.visibilityState==="visible" && ["/", "/leads"].includes(location.pathname) && !document.querySelector(".layer")) render();
 });
 
 /* Offline: a note at the top; back online: refresh what's on screen. */
@@ -120,7 +100,5 @@ async function start(){
   depth = (history.state && history.state.depth) || 0;
   render();
   connection();
-  refreshDevice();
-  maybeShowSetup();
 }
 start();

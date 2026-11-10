@@ -1,6 +1,6 @@
 /* KlienKu Worker: /api/auth/* is sign-in, the rest of /api/* is the API; everything else
    is the built app in dist/ (wrangler.jsonc routes only /api/* through this code).
-   The Cron Trigger runs `scheduled` every 5 minutes to send reminders (worker/reminders.js).
+   Leads live in the Google Sheet (worker/api.js, worker/google.js); D1 keeps sign-in.
 
    GET    /api/health          is the database reachable (no sign-in needed)
    GET    /api/setup           can an account be created right now ({open})
@@ -8,14 +8,13 @@
    POST   /api/push/subscribe  remember this device for reminders (signed in)
    DELETE /api/push/subscribe  forget this device ({endpoint}) (signed in)
    POST   /api/push/test       remember this device and send it a test notification (signed in)
-   /api/clients…, /api/settings, /api/export, /api/account   see worker/api.js
+   /api/leads, /api/account    see worker/api.js
 
    Changes (anything but GET) must come from KlienKu's own pages: a request another site
    sends with this browser's cookie is refused. */
 import { handleApi } from "./api.js";
 import { getAuth, getUserId, signupOpen } from "./auth.js";
 import { isPushService, sendPush } from "./push.js";
-import { runReminders } from "./reminders.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" }
@@ -41,7 +40,7 @@ export default {
         if (request.method==="POST") return subscribe(request, env, user);
         if (request.method==="DELETE") return unsubscribe(request, env, user);
       }
-      if (/^\/api\/(clients|settings|export|account)(\/|$)/.test(url.pathname)){
+      if (/^\/api\/(leads|account)(\/|$)/.test(url.pathname)){
         const res = await handleApi(request, env, await getUserId(request, env));
         if (res) return res;
       }
@@ -51,10 +50,6 @@ export default {
       return json({ error: "Something went wrong" }, 500);
     }
     return env.ASSETS.fetch(request);
-  },
-
-  async scheduled(event, env, ctx){
-    ctx.waitUntil(runReminders(env));
   }
 };
 
