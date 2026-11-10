@@ -1,10 +1,11 @@
 /* Lead profile, from its row in the Google Sheet: WhatsApp / Call, Edit, status (changed
    here, saved to the sheet straight away), the next action and follow-up date (closed
-   leads: why), what they want, details and notes. */
+   leads: why), what they want, details, and the notes log (kept in KlienKu, not the sheet:
+   add a note, newest first, delete one). */
 import { api, cachedSheet, keepLead, loadSheet } from "../api.js";
-import { dayMonth, dueLong } from "../dates.js";
+import { dayMonth, dueLong, noteWhen } from "../dates.js";
 import { isClosed, isDate, leadState, statusName, telLink, whatsapp } from "../leads.js";
-import { closeSheet, openSheet } from "../sheets.js";
+import { closeSheet, confirmDialog, openSheet } from "../sheets.js";
 import { esc, gone, icon, isWide, pills, problem, toast, wirePills } from "../ui.js";
 
 const shown = v => isDate(v) ? dayMonth(v) : v;
@@ -36,12 +37,16 @@ function facts(l){
   return `<dl class="box facts">
     ${row("What they want", l.want, true)}
     ${row("Source", l.source)}${row("Last contacted", shown(l.last_contacted))}
-    ${row("Added", shown(l.added))}${row("Project type", l.type)}
+    ${row("First contact", shown(l.added))}${row("Project type", l.type)}
   </dl>`;
 }
 
 const notesBox = l => `<p class="label section-label">Notes</p>
-  <div class="box gnotes">${l.notes ? `<p>${esc(l.notes)}</p>` : `<p class="none">No notes yet.</p>`}</div>`;
+  <form class="box gnotes addnote"><textarea name="text" rows="2" maxlength="5000" placeholder="What did you talk about?" aria-label="New note"></textarea>
+    <div class="gnotes-btns"><button class="btn btn-primary" disabled>Add note</button></div></form>
+  ${(l.log || []).length ? `<ol class="log">${l.log.map(n=>`<li>
+    <div class="log-top"><span>${esc(noteWhen(n.at))}</span><button type="button" class="link" data-del="${n.id}">Delete</button></div>
+    <p>${esc(n.text)}</p></li>`).join("")}</ol>` : `<p class="log-empty">No notes yet.</p>`}`;
 
 const statusRow = (l, list) => `<label class="row-select status-row">
   <span>Status</span><b class="val">${esc(statusName(l.status))}</b>${icon("chevron")}
@@ -122,6 +127,31 @@ export async function leadView(root, { id }, ctx, { embedded = false, onClose, o
       sheet = cachedSheet(); again(); if (onChange) onChange();
     } catch(err){ toast(err.message, true); sel.disabled = false; }
   });
+
+  // notes: add (newest at the top), delete after asking
+  const add = root.querySelector(".addnote"), area = add.elements.text, addBtn = add.querySelector("button");
+  const fit = () => { area.style.height = "auto"; area.style.height = area.scrollHeight + "px"; addBtn.disabled = !area.value.trim(); };
+  area.addEventListener("input", fit);
+  add.addEventListener("submit", async e=>{
+    e.preventDefault();
+    const text = area.value.trim();
+    if (!text) return;
+    addBtn.disabled = true;
+    try {
+      const { note } = await api(`/leads/${id}/notes`, { method: "POST", body: { text } });
+      keepLead({ ...l, log: [note, ...(l.log || [])] }); toast("Note added");
+      sheet = cachedSheet(); again(); if (onChange) onChange();
+    } catch(err){ toast(err.message, true); addBtn.disabled = false; }
+  });
+  root.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
+    const nid = Number(b.dataset.del);
+    if (!await confirmDialog({ title: "Delete this note?", text: "It can't be brought back." })) return;
+    try {
+      await api(`/leads/${id}/notes/${nid}`, { method: "DELETE" });
+      keepLead({ ...l, log: (l.log || []).filter(n=>n.id!==nid) }); toast("Note deleted");
+      sheet = cachedSheet(); again(); if (onChange) onChange();
+    } catch(err){ toast(err.message, true); }
+  }));
 
   root.dataset.lead = id;
   if (!embedded && !fresh) loadSheet().then(()=>{

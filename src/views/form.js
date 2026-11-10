@@ -1,7 +1,7 @@
 /* Add lead (Figma 5) and Edit lead (Figma 9), written straight into the Google Sheet. Only
    the name is needed. The choices (status, project type, source, stopped reason) come from
    the sheet's Lists tab. Editing sends only what changed, so a change made in the sheet
-   meanwhile isn't overwritten. Delete (at the bottom of Edit) removes the lead's row. */
+   meanwhile isn't overwritten. Notes aren't here: they're added on the lead page. Delete (at the bottom of Edit) removes the lead's row. */
 import { api, cachedSheet, dropLead, keepLead, loadSheet } from "../api.js";
 import { confirmDialog } from "../sheets.js";
 import { isClosed, isDate } from "../leads.js";
@@ -40,9 +40,7 @@ function fields(l, lists, editing){
       ${input("next_action", "Next action", 'maxlength="300" placeholder="e.g. Send quotation"')}
       ${date("follow_up", "Next follow-up")}
     </div>
-    ${editing ? `<p class="label">Dates</p><div class="group">${date("last_contacted", "Last contacted")}${date("added", "Date added")}</div>` : ""}
-    <p class="label">Notes</p>
-    <textarea class="notes" name="notes" rows="3" maxlength="5000" placeholder="Anything worth keeping about this lead">${esc(l.notes)}</textarea>`;
+    ${editing ? `<p class="label">Dates</p><div class="group">${date("last_contacted", "Last contacted")}${date("added", "First contact")}</div>` : ""}`;
 }
 
 function wire(form){
@@ -63,7 +61,7 @@ function read(form, pick, original){
   const f = Object.fromEntries(new FormData(form));
   const out = { name: f.name, phone: f.phone, location: f.location, want: f.want, status: f.status,
     type: pick("type"), source: pick("source"), reason: shouldAskReason(f.status) ? pick("reason") : (original.reason || ""),
-    next_action: f.next_action, follow_up: f.follow_up, notes: f.notes };
+    next_action: f.next_action, follow_up: f.follow_up };
   if ("added" in f){ out.added = f.added; out.last_contacted = f.last_contacted; }
   for (const k in out) out[k] = (out[k] || "").trim();
   // a date the sheet holds as text can't show in a date box: left empty, it stays as it is

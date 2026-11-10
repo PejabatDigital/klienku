@@ -23,6 +23,13 @@ export function clock(hhmm){
 const fmt = (s, opts) => parse(s).toLocaleDateString("en-GB", opts).replace(",", "");
 export const shortDate = s => fmt(s, { weekday: "short", day: "numeric", month: "short" });   // Wed 29 Oct
 export const dayMonth = s => fmt(s, { day: "numeric", month: "short" });                         // 29 Oct
+/* When a note was written: "4 Nov, 3:15 pm" (another year: "4 Nov 2025, 3:15 pm"); a
+   note copied from the sheet has only a day: "4 Nov". */
+export function noteWhen(at){
+  const d = at.length===10 ? parse(at) : new Date(at);
+  const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear()!==new Date().getFullYear() ? { year: "numeric" } : {}) });
+  return at.length===10 ? day : `${day}, ${clock(`${d.getHours()}:${d.getMinutes()}`)}`;
+}
 export const longToday = () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }).replace(",", "");
 
 /* overdue | today | upcoming, or null when there's no due date. */

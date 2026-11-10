@@ -10,7 +10,7 @@ import { leadView } from "./lead.js";
 
 const KEY = "kk:leadsView";
 const BLANK = { stage: "all", type: "all", source: "all" };
-let view = { tab: "active", q: "", sort: "due", ...BLANK };
+let view = { tab: "active", q: "", sort: "added", ...BLANK };
 try { view = { ...view, ...JSON.parse(sessionStorage.getItem(KEY)) }; } catch(e){}
 if (!["active", "closed"].includes(view.tab)) view.tab = "active";
 const keep = () => { try { sessionStorage.setItem(KEY, JSON.stringify(view)); } catch(e){} };
@@ -20,9 +20,9 @@ const tabOf = l => isClosed(l) ? "closed" : "active";
 const byContact = (a, b) => (b.last_contacted || "").localeCompare(a.last_contacted || "");
 
 const SORTS = {
+  added: ["First contact, newest", (a, b)=>(b.added || "").localeCompare(a.added || "")],
+  oldest: ["First contact, oldest", (a, b)=>(a.added || "").localeCompare(b.added || "")],
   due: ["Follow-up date", byFollowUp],
-  added: ["Recently added", (a, b)=>(b.added || "").localeCompare(a.added || "")],
-  oldest: ["Oldest first", (a, b)=>(a.added || "").localeCompare(b.added || "")],
   contact: ["Last contacted", byContact],
   name: ["Name", (a, b)=>(a.name || "").localeCompare(b.name || "")],
 };
@@ -30,7 +30,10 @@ const SORTS = {
 /* A sheet date as "4 Nov"; text the sheet couldn't read as a date is shown as it is. */
 const shown = v => isDate(v) ? dayMonth(v) : v;
 
-/* The table for wide screens. Columns marked "opt" hide while a lead is open beside it. */
+/* The table for wide screens, in Amin's order: First contact, Name, Phone, Project,
+   Location, What they want, Next action, Follow up, Last contact, then Status (closed
+   leads: Reason instead of Next action and Follow up). Columns marked "opt" hide while a
+   lead is open beside it; "opt2" too under 1280 px. */
 function table(list, tab, chosen){
   const due = l => {
     if (!isDate(l.follow_up)) return l.follow_up ? esc(l.follow_up) : `<span class="due-none"><i></i>No follow-up</span>`;
@@ -38,17 +41,21 @@ function table(list, tab, chosen){
     return s==="upcoming" ? esc(text) : `<span class="due-${s}"><i></i>${esc(text)}</span>`;
   };
   // [heading, classes, cell]; "muted" greys the text, "clip" cuts long text short
-  const name = ["Name", "nw", l=>`<b>${esc(l.name || "No name")}</b>`];
-  const stage = ["Status", "nw", l=>`<span class="chip chip-stage">${esc(statusName(l.status))}</span>`];
-  const rest = [["Project", "opt2 muted clip short", l=>esc(l.type) || "—"], ["Location", "opt muted clip short", l=>esc(l.location) || "—"],
-    ["What they want", "opt muted clip mid", l=>esc(l.want) || "—"]];
-  const last = ["Last contact", "opt muted", l=>esc(shown(l.last_contacted)) || "—"];
+  const first = [
+    ["First contact", "opt muted nw", l=>esc(shown(l.added)) || "—"],
+    ["Name", "nw name", l=>`<b>${esc(l.name || "No name")}</b>`],
+    ["Phone", "opt muted nw", l=>esc(l.phone) || "—"],
+    ["Project", "opt2 muted clip short", l=>esc(l.type) || "—"],
+    ["Location", "opt muted clip short", l=>esc(l.location) || "—"],
+    ["What they want", "opt muted clip short", l=>esc(l.want) || "—"]];
+  const last = [["Last contact", "opt muted nw", l=>esc(shown(l.last_contacted)) || "—"],
+    ["Status", "nw", l=>`<span class="chip chip-stage">${esc(statusName(l.status))}</span>`]];
   const cols = tab==="active"
-    ? [name, stage, ["Follow-up", "nw", due], ["Next action", "clip", l=>esc(l.next_action) || "—"], ...rest, last]
-    : [name, stage, ["Reason", "clip", l=>esc(l.reason) || "—"], ...rest, [last[0], "muted", last[2]]];
+    ? [...first, ["Next action", "clip mid", l=>esc(l.next_action) || "—"], ["Follow up", "nw", due], ...last]
+    : [...first, ["Reason", "clip", l=>esc(l.reason) || "—"], ...last];
   const rows = list.map(l=>`<tr data-id="${esc(l.id)}" tabindex="0"${l.id===chosen ? ' class="sel"' : ""}>${
     cols.map(([, cls, cell])=>`<td${cls ? ` class="${cls}"` : ""}>${cell(l)}</td>`).join("")}</tr>`).join("");
-  return `<div class="table-wrap"><table class="ctable"><thead><tr>${cols.map(([h, cls])=>`<th${cls ? ` class="${cls.replace(/ ?(muted|clip|short|mid|nw)/g, "")}"` : ""}>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="ctable"><thead><tr>${cols.map(([h, cls])=>`<th${cls ? ` class="${cls.replace(/ ?(muted|clip|short|mid|nw|name)\b/g, "")}"` : ""}>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 /* A filter shown as "Label: Value ⌄" over a native list. */
@@ -63,7 +70,7 @@ const localDigits = s => { const d = (s || "").replace(/\D/g, ""); return d.star
 function matches(l, q){
   if (!q) return true;
   const t = q.toLowerCase(), digits = localDigits(q);
-  return [l.name, l.type, l.location, l.want, l.next_action, l.reason, l.notes, l.phone].some(v=>(v || "").toLowerCase().includes(t))
+  return [l.name, l.type, l.location, l.want, l.next_action, l.reason, l.phone, ...(l.log || []).map(n=>n.text)].some(v=>(v || "").toLowerCase().includes(t))
     || (digits.length >= 3 && localDigits(l.phone).includes(digits));
 }
 const anyFilter = () => (view.tab==="active" && view.stage!=="all") || view.type!=="all" || view.source!=="all";

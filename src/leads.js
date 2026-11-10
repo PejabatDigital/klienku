@@ -1,6 +1,7 @@
 /* Lead helpers. A lead is one row of the Google Sheet's Leads tab (see worker/api.js):
    {id, row, added, name, status, phone, source, type, location, want, last_contacted,
-   next_action, follow_up, reason, notes}, all text; dates as YYYY-MM-DD when the sheet
+   next_action, follow_up, reason, log}, all text but `log` (its notes, newest first: {id, at,
+   text}, kept in KlienKu); dates as YYYY-MM-DD when the sheet
    has a real date. Statuses come from the sheet's Lists tab, in its order. */
 import { status as dueStatus } from "./dates.js";
 

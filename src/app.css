@@ -158,6 +158,17 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .gnotes-btns{ display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:10px; }
 .gnotes-btns .link{ font-size:15px; color:var(--text-muted); }
 .gnotes-btns .btn{ width:auto; margin:0; min-height:40px; padding:0 18px; border-radius:10px; }
+/* Notes log (lead page): newest first, date and time over the text */
+.addnote .gnotes-btns{ margin-top:8px; }
+.addnote .btn:disabled{ opacity:.45; }
+.log{ list-style:none; margin:12px 0 0; padding:0; }
+.log li{ padding:12px 0; border-bottom:1px solid var(--line); }
+.log li:last-child{ border-bottom:0; }
+.log-top{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:13px; line-height:18px; color:var(--text-muted); }
+.log-top .link{ font-size:13px; color:var(--text-muted); padding:0; }
+.log-top .link:hover{ color:var(--overdue); }
+.log li p{ margin:4px 0 0; white-space:pre-line; overflow-wrap:anywhere; }
+.log-empty{ margin:12px 0 0; color:#A8A49D; }
 .danger-link{ color:var(--overdue) !important; }
 .form .danger-link{ margin-top:20px; }
 
@@ -332,7 +343,7 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   .lwrap.open .search{ width:220px; }
   .lwrap.open .ctable td{ white-space:nowrap; }
   .lwrap.open .table-wrap{ overflow-x:auto; }
-  .lwrap.open .ctable td:first-child b{ display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+  .lwrap.open .ctable td.name b{ display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
   .filters{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
   .filter{ position:relative; display:inline-flex; align-items:center; gap:4px; padding:6px 10px 6px 12px; border:1px solid var(--line); border-radius:999px;
     background:var(--surface); font-size:14px; color:var(--text-muted); cursor:pointer; white-space:nowrap; }
@@ -359,7 +370,7 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   .sort select{ position:absolute; inset:0; opacity:0; cursor:pointer; }
   .table-wrap{ margin-top:16px; background:var(--surface); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .ctable{ width:100%; border-collapse:collapse; }
-  .ctable th{ text-align:left; padding:12px 16px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--line); white-space:nowrap; }
+  .ctable th{ text-align:left; padding:12px 16px; font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--line); white-space:nowrap; }
   .ctable td{ padding:11px 16px; border-bottom:1px solid var(--line); vertical-align:middle; }
   .ctable tr:last-child td{ border-bottom:0; }
   .ctable tbody tr{ cursor:pointer; }
@@ -367,9 +378,9 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   .ctable td.muted{ color:var(--text-muted); }
   .ctable td.nw{ white-space:nowrap; }
   .ctable td.clip{ max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ctable td.clip.short{ max-width:130px; } .ctable td.clip.mid{ max-width:180px; }
+  .ctable td.clip.short{ max-width:130px; } .ctable td.clip.mid{ max-width:170px; }
   .table-wrap{ overflow-x:auto; }
-  .ctable th, .ctable td{ padding-left:12px; padding-right:12px; }
+  .ctable th, .ctable td{ padding-left:10px; padding-right:10px; }
   .ctable th:first-child, .ctable td:first-child{ padding-left:16px; }
   .lwrap.open .ctable td.clip{ max-width:200px; }
   .ctable td b{ font-weight:600; }

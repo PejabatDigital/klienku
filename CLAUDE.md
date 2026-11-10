@@ -295,8 +295,9 @@ interaction log. Build the base, then add to it.
   Won, Closed. Won and Closed (also Lost/Stopped) = finished, shown under Closed; Won in green.
 - Connection: Google service account, JSON key in secret `GOOGLE_SERVICE_ACCOUNT`; the sheet
   is shared with its email as Editor. `worker/google.js` signs a JWT with Web Crypto (no
-  library), token kept in memory. D1 now only keeps sign-in (Better Auth); the old V2 leads
-  stay in D1 untouched and aren't shown. The reminders cron is removed.
+  library), token kept in memory. D1 keeps sign-in (Better Auth) and, from V3.5, the notes
+  log (`lead_notes`); the old V2 leads stay in D1 untouched and aren't shown. The reminders
+  cron is removed.
 - API (`worker/api.js`): `GET /api/leads` → `{leads, lists, sheet_url}`; `POST /api/leads` (new
   row after the last one; Date = today in Malaysia, Status = first in the list); `PATCH
   /api/leads/:id` (only the fields sent); `DELETE /api/leads/:id` (removes the row);
@@ -325,6 +326,22 @@ Phases (one at a time, each confirmed by Amin):
     at the very bottom. iPad (no hover) keeps the icons.
   - The Google Sheet link lives only in Settings (first row of the menu, opens the sheet).
     Gone from the lead page, the sidebar and Account.
+- **V3.5 Notes log + laptop table order** (asked by Amin 10 Nov 2026; he liked V1's running
+  notes and wants less emphasis on follow-ups):
+  - Notes live in KlienKu's D1, not the sheet (Amin's choice; they move with the leads when
+    Sheets is dropped). `migrations/0008_lead_notes.sql`: `lead_notes` (user_id, lead_id =
+    the sheet's ID, at, text, from_sheet, deleted). `GET /api/leads` adds `log` (newest first)
+    to each lead; `POST /api/leads/:id/notes {text}`; `DELETE /api/leads/:id/notes/:nid`
+    (marks it deleted). Deleting a lead deletes its notes.
+  - The sheet's Notes column is no longer shown or edited in the app: each lead's Notes cell
+    is copied once into its log (dated on its Date; also for leads added in the sheet later).
+    The sheet itself is left as it is.
+  - Lead page: Notes = an "Add note" box, then the notes (date + time, Delete asks first).
+    "Added" / "Date added" now say **First contact** (the sheet's Date column).
+  - Laptop table order (Amin's, app only; the sheet stays as it is): First contact, Name,
+    Phone, Project, Location, What they want, Next action, Follow up, Last contact, Status
+    (Closed tab: Reason instead of Next action + Follow up). Default sort First contact,
+    newest. Search also looks in notes. Phone cards unchanged.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

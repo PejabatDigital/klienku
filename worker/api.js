@@ -7,10 +7,16 @@
    POST   /api/leads       add a lead as a new row at the bottom (only the name is needed): {lead}
    PATCH  /api/leads/:id   change some of a lead's fields; only the fields sent are written: {lead}
    DELETE /api/leads/:id   delete the lead: its whole row is removed from the sheet: {ok}
+   POST   /api/leads/:id/notes        add a note to the lead's log {text}: {note}
+   DELETE /api/leads/:id/notes/:nid   delete a note: {ok}
    DELETE /api/account     delete the signed-in user and what KlienKu keeps for them (not the sheet)
 
    Writes are typed cells (text stays text, so 012… keeps its 0; dates are real dates), and
-   only touch values: the sheet's formats, dropdowns and the WhatsApp formula stay. */
+   only touch values: the sheet's formats, dropdowns and the WhatsApp formula stay.
+
+   Notes (the running log on each lead page) are kept in D1 (`lead_notes`), not in the
+   sheet. Each lead comes with `log`: its notes, newest first, as {id, at, text}. A lead's
+   Notes cell in the sheet is copied in once as its first note, dated on its Date. */
 
 import { SheetError, sheetUrl, sheets } from "./google.js";
 
@@ -46,6 +52,26 @@ const day = v => typeof v==="number" ? new Date(EPOCH + Math.floor(v) * 86400000
 const serial = ymd => { const [y, m, d] = ymd.split("-").map(Number); return (Date.UTC(y, m - 1, d) - EPOCH) / 86400000; };
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
 const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+
+/* Every lead's notes, newest first, as `log` on each lead. Sheet Notes cells not copied
+   yet are copied first (one batch). */
+async function withLogs(env, user, leads){
+  const { results } = await env.DB.prepare(
+    "SELECT id, lead_id, at, text, from_sheet, deleted FROM lead_notes WHERE user_id = ?1 ORDER BY at DESC, id DESC"
+  ).bind(user).all();
+  const copied = new Set(results.filter(n=>n.from_sheet).map(n=>n.lead_id));
+  const toCopy = leads.filter(l=>l.notes && !copied.has(l.id));
+  if (toCopy.length){
+    const now = new Date().toISOString();
+    const ins = env.DB.prepare("INSERT INTO lead_notes (user_id, lead_id, at, text, from_sheet, created_at) VALUES (?1, ?2, ?3, ?4, 1, ?5) RETURNING id, lead_id, at, text");
+    const done = await env.DB.batch(toCopy.map(l=>ins.bind(user, l.id, /^\d{4}-\d{2}-\d{2}$/.test(l.added) ? l.added : today(), l.notes.slice(0, 5000), now)));
+    for (const r of done) results.push(...r.results);
+    results.sort((a, b)=>b.at.localeCompare(a.at) || b.id - a.id);
+  }
+  const logs = {};
+  for (const n of results) if (!n.deleted) (logs[n.lead_id] ||= []).push({ id: n.id, at: n.at, text: n.text });
+  return leads.map(({ notes, ...l })=>({ ...l, log: logs[l.id] || [] }));
+}
 
 /* The Leads tab's sheet id (needed to write cells), looked up once. */
 let leadsGid = null;
@@ -138,12 +164,30 @@ async function body(request){
 export async function handleApi(request, env, user){
   const url = new URL(request.url), path = url.pathname, method = request.method;
   const one = /^\/api\/leads\/([\w-]+)$/.exec(path);
-  if (!(path==="/api/leads" || one || path==="/api/account")) return null;
+  const note = /^\/api\/leads\/([\w-]{1,40})\/notes(?:\/(\d+))?$/.exec(path);
+  if (!(path==="/api/leads" || one || note || path==="/api/account")) return null;
   if (!user) return json({ error: "Sign in required" }, 401);
   try {
     if (path==="/api/leads" && method==="GET"){
       const { leads, lists } = await readSheet(env);
-      return json({ leads, lists, sheet_url: sheetUrl(env) });
+      return json({ leads: await withLogs(env, user, leads), lists, sheet_url: sheetUrl(env) });
+    }
+
+    if (note && !note[2] && method==="POST"){
+      const b = await body(request);
+      const text = typeof b.text==="string" ? b.text.trim() : "";
+      if (!text) bad("Write a note first");
+      if (text.length > 5000) bad("Note is too long");
+      const now = new Date().toISOString();
+      const n = await env.DB.prepare("INSERT INTO lead_notes (user_id, lead_id, at, text, created_at) VALUES (?1, ?2, ?3, ?4, ?3) RETURNING id, at, text")
+        .bind(user, note[1], now, text).first();
+      return json({ note: n }, 201);
+    }
+
+    if (note && note[2] && method==="DELETE"){
+      await env.DB.prepare("UPDATE lead_notes SET deleted = 1 WHERE id = ?1 AND user_id = ?2 AND lead_id = ?3")
+        .bind(Number(note[2]), user, note[1]).run();
+      return json({ ok: true });
     }
 
     if (path==="/api/leads" && method==="POST"){
@@ -151,7 +195,8 @@ export async function handleApi(request, env, user){
       if (!f.name) bad("Name is required");
       const lead = { ...EMPTY, added: today(), status: s.lists.status[0] || "", ...f, id: newId() };
       await writeRow(env, s.head, s.nextRow, lead);
-      return json({ lead: { ...lead, row: s.nextRow } }, 201);
+      const { notes, ...shown } = lead;
+      return json({ lead: { ...shown, row: s.nextRow, log: [] } }, 201);
     }
 
     if (one && method==="PATCH"){
@@ -160,7 +205,8 @@ export async function handleApi(request, env, user){
       if (!lead) return json({ error: "Lead not found. It may have been removed from the Google Sheet." }, 404);
       const f = clean(b, s.lists, lead);
       await writeRow(env, s.head, lead.row, f);
-      return json({ lead: { ...lead, ...f } });
+      const { notes, ...shown } = { ...lead, ...f };
+      return json({ lead: shown }); // the app keeps the lead's log it already has
     }
 
     // the row goes, so the rows below move up (the WhatsApp formula in D1 follows by itself)
@@ -172,6 +218,7 @@ export async function handleApi(request, env, user){
       await sheets(env, ":batchUpdate", { method: "POST", body: { requests: [
         { deleteDimension: { range: { sheetId, dimension: "ROWS", startIndex: lead.row - 1, endIndex: lead.row } } },
       ] } });
+      await env.DB.prepare("DELETE FROM lead_notes WHERE user_id = ?1 AND lead_id = ?2").bind(user, lead.id).run();
       return json({ ok: true });
     }
 
@@ -179,7 +226,7 @@ export async function handleApi(request, env, user){
     if (path==="/api/account" && method==="DELETE"){
       const db = env.DB;
       await db.batch([
-        ...["activity", "clients", "settings", "push_subscriptions"].map(t=>db.prepare(`DELETE FROM ${t} WHERE user_id = ?1`).bind(user)),
+        ...["lead_notes", "activity", "clients", "settings", "push_subscriptions"].map(t=>db.prepare(`DELETE FROM ${t} WHERE user_id = ?1`).bind(user)),
         db.prepare(`DELETE FROM "verification" WHERE "value" = ?1`).bind(user),
         db.prepare(`DELETE FROM "session" WHERE "userId" = ?1`).bind(user),
         db.prepare(`DELETE FROM "account" WHERE "userId" = ?1`).bind(user),
