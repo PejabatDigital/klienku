@@ -1,6 +1,6 @@
 /* Settings → Account (/settings/account): name, phone, email, change password, the Google
    Sheet, sign out, and delete my account (type DELETE to confirm). */
-import { api, cachedSheet, forgetSheet } from "../api.js";
+import { api, forgetSheet } from "../api.js";
 import { currentUser, signOut, updateUser } from "../account.js";
 import { turnOff } from "../push.js";
 import { closeSheet, openSheet } from "../sheets.js";
@@ -36,7 +36,6 @@ export async function accountPage(root){
   root.insertAdjacentHTML("beforeend", `<div class="loading">Loading…</div>`);
   const user = await currentUser();
   if (!user) return problem(root.querySelector(".loading"), new Error("offline"), ()=>location.reload());
-  const sheet = cachedSheet();
   const value = key => user[key] ? `<b>${esc(user[key])}</b>` : `<b class="unset">Add</b>`;
   root.querySelector(".loading").outerHTML = `<div class="account">
     <div class="group">
@@ -46,7 +45,6 @@ export async function accountPage(root){
     </div>
     <div class="group gap">
       <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
-      ${sheet ? `<a class="srow" href="${esc(sheet.sheet_url)}" target="_blank" rel="noopener"><span>Google Sheet<small>Renovasi KL Leads, where your leads are kept</small></span>${icon("chevron")}</a>` : ""}
       <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
     </div>
     <p class="label">Danger zone</p>

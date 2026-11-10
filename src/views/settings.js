@@ -1,6 +1,7 @@
-/* Settings (Figma 6): a short menu, each part on its own page — /settings/account (in
-   account.js) and /settings/about. Reminders are off in Version 3 for now. */
+/* Settings (Figma 6): a short menu — the Google Sheet (opens it), then pages of their own:
+   /settings/account (in account.js) and /settings/about. Reminders are off in Version 3. */
 import { currentUser } from "../account.js";
+import { cachedSheet, loadSheet } from "../api.js";
 import { accountPage } from "./account.js";
 import { esc, icon } from "../ui.js";
 
@@ -28,10 +29,12 @@ export async function settingsView(root, { id } = {}, { back } = {}){
     return page(root);
   }
   // the menu: each row says what's set inside
-  const user = await currentUser().catch(()=>null);
-  const row = (path, ic, label, sub) => `<a class="srow menu" href="/settings/${path}" data-link>
-    <i class="ico">${icon(ic)}</i><span>${label}${sub ? `<small>${esc(sub)}</small>` : ""}</span>${icon("chevron")}</a>`;
-  root.innerHTML = `<header class="head"><h1>Settings</h1></header><div class="group">
+  const [user, sheet] = await Promise.all([currentUser().catch(()=>null), cachedSheet() || loadSheet().catch(()=>null)]);
+  const inner = (ic, label, sub) => `<i class="ico">${icon(ic)}</i><span>${label}${sub ? `<small>${esc(sub)}</small>` : ""}</span>${icon("chevron")}`;
+  const row = (path, ic, label, sub) => `<a class="srow menu" href="/settings/${path}" data-link>${inner(ic, label, sub)}</a>`;
+  root.innerHTML = `<header class="head"><h1>Settings</h1></header>
+    ${sheet ? `<div class="group"><a class="srow menu" href="${esc(sheet.sheet_url)}" target="_blank" rel="noopener">${inner("sheet", "Google Sheet", "Renovasi KL Leads, where your leads are kept")}</a></div>` : ""}
+    <div class="group${sheet ? " gap" : ""}">
       ${row("account", "user", "Account", user ? (user.name ? `${user.name} · ${user.email}` : user.email) : "")}
       ${row("about", "info", "About", "Privacy, terms and contact")}
     </div>

@@ -1,6 +1,6 @@
 /* Lead profile, from its row in the Google Sheet: WhatsApp / Call, Edit, status (changed
    here, saved to the sheet straight away), the next action and follow-up date (closed
-   leads: why), what they want, details, notes, and a link to the row in the sheet. */
+   leads: why), what they want, details and notes. */
 import { api, cachedSheet, keepLead, loadSheet } from "../api.js";
 import { dayMonth, dueLong } from "../dates.js";
 import { isClosed, isDate, leadState, statusName, telLink, whatsapp } from "../leads.js";
@@ -80,7 +80,6 @@ export async function leadView(root, { id }, ctx, { embedded = false, onClose, o
     if (!find()) return gone(root);
   }
   const l = find(), wa = whatsapp(l.phone), tel = telLink(l.phone), wide = isWide();
-  const rowLink = `${sheet.sheet_url}#gid=0&range=A${l.row}`;
 
   const contact = (wa ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon("chat")}WhatsApp</a>` : "")
     + (tel ? `<a class="btn btn-white" href="tel:${esc(tel)}">${icon("phone")}Call</a>` : "");
@@ -90,8 +89,7 @@ export async function leadView(root, { id }, ctx, { embedded = false, onClose, o
       ${l.phone ? `<p class="meta">${esc(l.phone)}</p>` : ""}
     </div>`;
   const body = statusRow(l, sheet.lists.status)
-    + nextCard(l) + facts(l) + notesBox(l)
-    + `<a class="btn btn-white sheet-link" href="${esc(rowLink)}" target="_blank" rel="noopener">${icon("sheet")}Open in Google Sheets</a>`;
+    + nextCard(l) + facts(l) + notesBox(l);
 
   root.innerHTML = wide ? `
     ${embedded ? (onClose ? `<nav class="topbar"><button class="back" data-act="close">${icon("x")}Close</button></nav>` : "") : `<nav class="topbar"><button class="back" data-act="back">${icon("back")}Leads</button></nav>`}

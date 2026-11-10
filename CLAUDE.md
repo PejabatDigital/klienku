@@ -307,7 +307,7 @@ interaction log. Build the base, then add to it.
   cards grouped by status, Mac table with Status/Project/Source filters and a sort, lead in a
   right panel. `/leads/:id` the profile: WhatsApp / Call, status, next action + follow-up
   date, what they want, source, last contacted, added, phone, notes, Open in Google Sheets
-  (jumps to the row). Settings: Account (Google Sheet link replaces Download my data), About.
+  (V3.4: removed). Settings: Google Sheet (opens it), Account, About.
   Helpers in `src/leads.js`; the list is cached on the device (`kk:leads`).
 
 Phases (one at a time, each confirmed by Amin):
@@ -319,10 +319,12 @@ Phases (one at a time, each confirmed by Amin):
 - **V3.3 Delete + slide-away menu** (asked by Amin 10 Nov 2026):
   - Delete lead: a red link at the bottom of Edit, then a confirm dialog; the Worker removes
     the lead's whole row from the sheet (`deleteDimension`), the app drops it from `kk:leads`.
-  - Mac sidebar: a button by the logo hides it to icons only (72 px, names on hover) and
-    shows it again; the choice stays on the device (`kk:side-min`). Width is `--side-w`.
-  - Later (with the menu/Settings rework): "Open in Google Sheets" in one place you
-    navigate to, not on every lead page and the sidebar.
+- **V3.4 Sidebar + Settings tidy-up** (asked by Amin 10 Nov 2026):
+  - Mac sidebar is icons only (72 px, `--side-w`) and opens to 240 px over the page while
+    the pointer is on it (or keyboard focus); no toggle button. Leads at the top, Settings
+    at the very bottom. iPad (no hover) keeps the icons.
+  - The Google Sheet link lives only in Settings (first row of the menu, opens the sheet).
+    Gone from the lead page, the sidebar and Account.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

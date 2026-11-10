@@ -149,7 +149,6 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .form .status-pick{ margin-top:20px; }
 .contact.one{ grid-template-columns:1fr; }
 .segment.two{ grid-template-columns:1fr 1fr; }
-.sheet-link{ margin-top:24px; border-radius:12px; }
 .row-label{ display:flex; align-items:center; justify-content:space-between; }
 .row-label .link{ padding:0; font-size:15px; font-weight:600; letter-spacing:0; text-transform:none; }
 .gnotes{ margin-top:0; }
@@ -270,42 +269,35 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
 .side{ display:none; }
 
 @media (min-width: 1024px){
+  /* Sidebar: icons only; on a Mac it opens over the page while the pointer is on it.
+     Icons keep their place (centred in the 72 px bar) and the names fade in. */
+  body.wide{ --side-w:72px; }
   body.wide .side{
     display:flex; flex-direction:column; position:fixed; z-index:20; top:0; left:0; bottom:0; width:var(--side-w);
-    padding:24px 16px 16px; background:var(--surface); border-right:1px solid var(--line); overflow:hidden; white-space:nowrap;
+    padding:24px 12px 16px; background:var(--surface); border-right:1px solid var(--line); overflow:hidden; white-space:nowrap;
+    transition:width .18s ease, box-shadow .18s ease;
   }
-  body.wide{ --side-w:240px; }
-  body.wide.side-min{ --side-w:72px; }
-  body.side-anim .side{ transition:width .2s ease; }
-  body.side-anim.wide .view{ transition:margin-left .2s ease; }
-  .side-brand{ display:flex; align-items:center; gap:10px; padding:0 8px; font-size:20px; font-weight:700; letter-spacing:-.01em; color:var(--navy); }
-  .side-toggle{ margin-left:auto; display:grid; place-items:center; width:32px; height:32px; flex:none; padding:0; border:0; border-radius:8px; background:none; color:var(--text-muted); cursor:pointer; }
-  .side-toggle:hover{ background:var(--subtle); color:var(--text); }
-  .side-toggle svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
-  /* icons only */
-  body.side-min .side{ padding-left:12px; padding-right:12px; }
-  body.side-min .side .lbl{ display:none; }
-  body.side-min .side-brand{ flex-direction:column; gap:12px; padding:0; }
-  body.side-min .side-toggle{ margin:0; }
-  body.side-min .side-toggle svg{ transform:scaleX(-1); }
-  body.side-min .side-add{ padding:0; gap:0; }
-  body.side-min .side-nav a, body.side-min .side-foot{ justify-content:center; padding-left:0; padding-right:0; position:relative; }
-  body.side-min .side-nav em{ position:absolute; top:3px; right:2px; min-width:18px; padding:0 5px; font-size:10px; line-height:16px; }
-  body.side-min .side-foot{ background:none; }
-  body.side-min .side-foot:hover{ background:var(--subtle); }
-  .side-brand img{ border-radius:8px; }
+  @media (hover: hover){
+    body.wide .side:hover, body.wide .side:has(:focus-visible){ width:240px; box-shadow:0 12px 40px rgba(28,27,25,.14); transition-delay:.12s; }
+    .side:hover .lbl, .side:has(:focus-visible) .lbl{ opacity:1; transition-delay:.12s; }
+  }
+  .side .lbl{ opacity:0; transition:opacity .15s ease; }
+  .side-brand{ display:flex; align-items:center; gap:12px; padding:0 8px; font-size:20px; font-weight:700; letter-spacing:-.01em; color:var(--navy); }
+  .side-brand img{ flex:none; border-radius:8px; }
   .side-brand b{ color:var(--brand-orange); }
-  .side-add{ margin:24px 0 16px; border-radius:12px; min-height:44px; }
-  .side-add svg, .side-nav svg, .side-foot svg{ width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+  .side-add{ margin:24px 0 16px; border-radius:12px; min-height:44px; justify-content:flex-start; gap:12px; padding:0 14px; overflow:hidden; }
+  .side-add svg, .side-nav svg{ width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
   .side-nav{ display:grid; gap:2px; }
-  .side-nav a{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; text-decoration:none; font-weight:500; color:var(--text); }
+  .side-nav.side-end{ margin-top:auto; }
+  .side-nav a{ position:relative; display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:500; color:var(--text); }
   .side-nav a:hover{ background:var(--subtle); }
   .side-nav a.on{ background:var(--accent-soft); color:var(--accent); font-weight:600; }
-  .side-nav em{ margin-left:auto; font-style:normal; font-size:12px; font-weight:600; min-width:24px; text-align:center; padding:1px 8px; border-radius:999px; background:var(--subtle); color:var(--text-muted); }
+  /* count: a badge on the icon; with the names showing, at the end of the row */
+  .side-nav em{ position:absolute; top:3px; left:30px; min-width:18px; padding:0 5px; border-radius:999px; font-style:normal; font-size:10px; line-height:16px; font-weight:600; text-align:center; background:var(--accent); color:#fff; }
   .side-nav em:empty{ display:none; }
-  .side-nav a.on em{ background:var(--accent); color:#fff; }
-  .side-foot{ margin-top:auto; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:var(--subtle); font-size:13px; line-height:18px; color:var(--text-muted); text-decoration:none; }
-  .side-foot:hover{ color:var(--text); }
+  @media (hover: hover){
+    .side:hover .side-nav em, .side:has(:focus-visible) .side-nav em{ left:auto; right:12px; top:50%; transform:translateY(-50%); font-size:12px; line-height:18px; padding:0 8px; }
+  }
 
   body.wide .view{ margin-left:var(--side-w); max-width:none; padding:32px 32px 48px; }
   body.wide .view.v-page, body.wide .view.v-settings{ padding-left:max(32px, calc((100vw - var(--side-w) - 720px) / 2)); padding-right:max(32px, calc((100vw - var(--side-w) - 720px) / 2)); }
