@@ -17,13 +17,13 @@ export async function api(path, { method = "GET", body } = {}){
   return data;
 }
 
-/* {leads, lists, sheet_url} from the Google Sheet, or null before the first load. */
+/* {leads, lists, sheet_url, loaded_at} from the Google Sheet, or null before the first load. */
 let sheet = null;
 try { sheet = JSON.parse(localStorage.getItem(CACHE)); localStorage.removeItem("kk:clients"); } catch(e){}
 
 export const cachedSheet = () => sheet;
 export async function loadSheet(){
-  sheet = await api("/leads");
+  sheet = { ...await api("/leads"), loaded_at: Date.now() };
   try { localStorage.setItem(CACHE, JSON.stringify(sheet)); } catch(e){}
   window.dispatchEvent(new Event("klienku:leads"));
   return sheet;

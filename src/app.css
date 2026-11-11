@@ -441,3 +441,46 @@ a.srow{ text-decoration:none; }
 .srow.menu .ico .ic{ width:19px; height:19px; color:var(--accent); }
 .srow b.unset{ color:var(--accent); font-weight:500; }
 .group.gap{ margin-top:16px; }
+
+/* Settings pages: a small heading over each white card; the first sits close to the title */
+.v-settings .head + .label{ margin-top:4px; }
+.v-settings .label{ margin:24px 4px 8px; }
+.v-settings .hint{ margin:8px 16px 0; }
+.srow.menu > .ic:last-child{ color:#B5B1AA; }
+.srow.menu.busy .ico .ic{ animation:kk-spin .8s linear infinite; }
+@keyframes kk-spin{ to{ transform:rotate(360deg); } }
+.srow:disabled{ cursor:default; }
+/* Account: name and phone typed straight into the row */
+.inrow{ cursor:text; }
+.inrow > span{ flex:none; width:80px; }
+.inrow input{ flex:1; min-width:0; border:0; outline:0; padding:0; background:none; text-align:right;
+  font:400 17px/24px var(--font); color:var(--text); -webkit-appearance:none; appearance:none; }
+.inrow input::placeholder{ color:var(--accent); opacity:1; }
+.inrow input:focus::placeholder{ color:#A8A49D; }
+.inrow:focus-within{ box-shadow:inset 3px 0 0 var(--accent); }
+
+/* Privacy Policy and Terms of Use inside the app: the text in one white card */
+.box.legaltext{ margin-top:0; padding:18px 20px 20px; font-size:15px; line-height:23px; }
+.legaltext h2{ margin:22px 0 4px; font-size:17px; line-height:24px; font-weight:600; }
+.legaltext p, .legaltext ul{ margin:6px 0; }
+.legaltext ul{ padding-left:20px; }
+.legaltext li{ margin:3px 0; }
+.legaltext .muted{ margin-top:0; color:var(--text-muted); font-size:13px; }
+.legaltext a{ color:var(--accent); }
+
+/* The slide between Settings pages (app.js): deeper → in from the right; back → out to the
+   right. Only the page moves: the tab bar and the sidebar stay put. */
+#view{ view-transition-name:page; }
+#tabbar{ view-transition-name:tabbar; } #side{ view-transition-name:side; } #offlineBar{ view-transition-name:offline; }
+.view.v-settings{ background:var(--bg); } /* so the sliding page isn't see-through */
+::view-transition-group(page){ overflow:hidden; animation-duration:.34s; }
+::view-transition-old(page), ::view-transition-new(page){
+  animation-duration:.34s; animation-timing-function:cubic-bezier(.32,.72,0,1); animation-fill-mode:both; mix-blend-mode:normal; }
+.go-fwd::view-transition-old(page){ animation-name:kk-push-out; }
+.go-fwd::view-transition-new(page){ animation-name:kk-slide-in; box-shadow:-8px 0 24px rgba(28,27,25,.08); }
+.go-back::view-transition-old(page){ animation-name:kk-slide-out; z-index:1; box-shadow:-8px 0 24px rgba(28,27,25,.08); }
+.go-back::view-transition-new(page){ animation-name:kk-push-back; }
+@keyframes kk-slide-in{ from{ transform:translateX(100%); } }
+@keyframes kk-slide-out{ to{ transform:translateX(100%); } }
+@keyframes kk-push-out{ to{ transform:translateX(-25%); opacity:.5; } }
+@keyframes kk-push-back{ from{ transform:translateX(-25%); opacity:.5; } }

@@ -1,6 +1,7 @@
 /* KlienKu app: signed-out → /signin; otherwise a small router over the screens.
    / (and /leads)  the leads from the Google Sheet · /leads/new  add · /leads/:id  a lead's
-   profile · /leads/:id/edit  edit · /settings (+ /account, /about). Old links (/dashboard,
+   profile · /leads/:id/edit  edit · /settings (+ /data, /account, /about, /privacy, /terms):
+   going deeper or back between Settings pages slides, like iPhone settings. Old links (/dashboard,
    /clients…) go to the leads. Wide screens (≥ 1024 px, see isWide) get the sidebar instead
    of the tab bar and + button: icons only, opening on hover. */
 import { registerSW } from "./pwa.js";
@@ -12,7 +13,7 @@ import { icon, isWide } from "./ui.js";
 import { leadsView } from "./views/leads.js";
 import { leadView } from "./views/lead.js";
 import { addView, editView } from "./views/form.js";
-import { settingsView } from "./views/settings.js";
+import { settingsLevel, settingsView } from "./views/settings.js";
 
 const view = document.getElementById("view");
 const tabbar = document.getElementById("tabbar"), fab = document.getElementById("fab"), side = document.getElementById("side");
@@ -22,7 +23,7 @@ const ROUTES = [
   [/^\/leads\/new$/, addView, {}],
   [/^\/leads\/([\w-]+)\/edit$/, editView, {}],
   [/^\/leads\/([\w-]+)$/, leadView, {}],
-  [/^\/settings(?:\/(account|about))?$/, settingsView, { tabs: true }],
+  [/^\/settings(?:\/(data|account|about|privacy|terms))?$/, settingsView, { tabs: true }],
   [/./, notFound, {}],
 ];
 
@@ -45,7 +46,23 @@ function back(fallback){
   if (depth > 0) history.back(); else go(fallback, { replace: true });
 }
 
+/* Settings pages slide: deeper in from the right, back out to the right. Uses the
+   browser's view transitions (iPhone iOS 18+, Safari 18+, Chrome); elsewhere, or with
+   Reduce Motion on, the page just changes. */
+let shownPath = location.pathname;
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
 function render(){
+  const from = settingsLevel(shownPath), to = settingsLevel(location.pathname.replace(/\/+$/, "") || "/");
+  shownPath = location.pathname;
+  if (!from || !to || from===to || !document.startViewTransition || calm.matches || document.hidden) return draw();
+  const html = document.documentElement, dir = to > from ? "go-fwd" : "go-back";
+  html.classList.add(dir);
+  const t = document.startViewTransition(draw);
+  t.ready.catch(()=>{}); // skipped (e.g. the app went to the background): the page still changes
+  t.finished.catch(()=>{}).finally(()=>html.classList.remove(dir));
+}
+
+function draw(){
   closeSheet();
   if (/^\/(clients|dashboard)(\/|$)|^\/settings\/notifications$/.test(location.pathname))
     history.replaceState(history.state, "", location.pathname.startsWith("/settings") ? "/settings" : "/");

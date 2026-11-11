@@ -308,7 +308,7 @@ interaction log. Build the base, then add to it.
   cards grouped by status, Mac table with Status/Project/Source filters and a sort, lead in a
   right panel. `/leads/:id` the profile: WhatsApp / Call, status, next action + follow-up
   date, what they want, source, last contacted, added, phone, notes, Open in Google Sheets
-  (V3.4: removed). Settings: Google Sheet (opens it), Account, About.
+  (V3.4: removed). Settings: Data, Account, About (V3.7).
   Helpers in `src/leads.js`; the list is cached on the device (`kk:leads`).
 
 Phases (one at a time, each confirmed by Amin):
@@ -357,6 +357,28 @@ Phases (one at a time, each confirmed by Amin):
     (and any other finished status), newest contact first.
   - Won leads are tinted green (`--won-soft`): phone cards and laptop table rows (`tr.won`,
     green edge on the left; the selected row keeps its orange highlight).
+- **V3.7 Settings tidy-up** (asked by Amin 11 Nov 2026; phone and Mac):
+  - Settings menu: **Data · Account · About** (one card). Every page: title, then white
+    cards under small headings (`.v-settings .label`), same foot. Pages draw at once from what
+    the device has (`knownUser()`, `cachedSheet()`), then check the server.
+  - Data (`/settings/data`): Open in Google Sheets (with "N leads · N active"), Refresh from
+    sheet ("Updated just now"; `loaded_at` set by `loadSheet`), Download leads and notes: a
+    CSV built in the app from a fresh load (the sheet's columns + a Notes column, newest first;
+    cells starting = or @ made text); iPhone share sheet, Mac Downloads. No new API.
+  - Account: Name and Phone typed straight into the rows (saved on leaving the box or Return;
+    empty clears), Email read only; Change password, Sign out of other devices (Better Auth
+    `revoke-other-sessions`, asks first), Sign out; Danger zone Delete my account (now says
+    notes go too, download first).
+  - About: Privacy Policy and Terms of Use only (Contact removed: it's in both). Shown in the
+    app at `/settings/privacy` and `/settings/terms` in a white card, read from the same
+    `public/privacy.html` / `terms.html` (header and footer dropped, links between them stay
+    in the app). The plain pages stay for sign-in.
+  - Privacy and Terms rewritten for Version 3 (leads in Amin's Google Sheet, notes and account
+    in KlienKu, old V2 data kept until account deletion, Google as a service, no reminders).
+  - Slide: going deeper in Settings slides the page in from the right, Back slides it out
+    (`render()` in `src/app.js`, `settingsLevel()`; View Transitions, `#view` named `page`;
+    tab bar and sidebar have their own names so they stay put). No slide where the browser
+    lacks it (before iOS 18), with Reduce Motion, or in the background.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

@@ -1,62 +1,64 @@
-/* Settings → Account (/settings/account): name, phone, email, change password, the Google
-   Sheet, sign out, and delete my account (type DELETE to confirm). */
+/* Settings → Account (/settings/account): name and phone (typed straight into the page,
+   saved when you leave the box), email, change password, sign out of other devices, sign
+   out, and delete my account (type DELETE to confirm). Drawn at once from the user saved on
+   this device, then checked with the server. */
 import { api, forgetSheet } from "../api.js";
-import { currentUser, signOut, updateUser } from "../account.js";
+import { currentUser, knownUser, signOut, signOutOthers, updateUser } from "../account.js";
 import { turnOff } from "../push.js";
-import { closeSheet, openSheet } from "../sheets.js";
-import { esc, icon, problem, toast } from "../ui.js";
+import { closeSheet, confirmDialog, openSheet } from "../sheets.js";
+import { esc, icon, toast } from "../ui.js";
 
 const FIELDS = {
-  name: { label: "Name", type: "text", max: 100, auto: "name", hint: "e.g. Amin Rahman" },
-  phone: { label: "Phone", type: "tel", max: 30, auto: "tel", hint: "e.g. 012-345 6789" },
+  name: { label: "Name", type: "text", max: 100, auto: "name", hint: "Add your name" },
+  phone: { label: "Phone", type: "tel", max: 30, auto: "tel", hint: "Add your phone" },
 };
 
-/* Edit one profile field in a sheet; leaving it empty clears it. */
-function fieldSheet(key, value, onSaved){
-  const f = FIELDS[key];
-  const sheet = openSheet(`
-    <h2>${f.label}</h2>
-    <form novalidate>
-      <input class="note" name="v" type="${f.type}" value="${esc(value)}" placeholder="${f.hint}" maxlength="${f.max}" autocomplete="${f.auto}">
-      <button class="btn btn-primary btn-lg">Save</button>
-    </form>
-    <button type="button" class="link center" data-close>Cancel</button>`);
-  const form = sheet.querySelector("form"), input = form.elements.v;
-  form.addEventListener("submit", async e=>{
-    e.preventDefault();
-    const btn = form.querySelector("button");
-    btn.disabled = true;
-    try { const user = await updateUser({ [key]: input.value.trim() }); closeSheet(); toast("Saved"); onSaved(user); }
-    catch(err){ toast(err.message, true); btn.disabled = false; }
-  });
-  input.focus();
-}
-
-export async function accountPage(root){
-  root.insertAdjacentHTML("beforeend", `<div class="loading">Loading…</div>`);
-  const user = await currentUser();
-  if (!user) return problem(root.querySelector(".loading"), new Error("offline"), ()=>location.reload());
-  const value = key => user[key] ? `<b>${esc(user[key])}</b>` : `<b class="unset">Add</b>`;
-  root.querySelector(".loading").outerHTML = `<div class="account">
+export function accountPage(root){
+  const user = knownUser() || { name: "", phone: "", email: "" };
+  const input = key => { const f = FIELDS[key]; return `<label class="srow inrow"><span>${f.label}</span>
+    <input name="${key}" type="${f.type}" value="${esc(user[key])}" aria-label="${f.label}" aria-label="${f.label}" placeholder="${f.hint}" maxlength="${f.max}" autocomplete="${f.auto}" enterkeyhint="done"></label>`; };
+  root.insertAdjacentHTML("beforeend", `<div class="account">
+    <p class="label">Profile</p>
     <div class="group">
-      <button type="button" class="srow" data-field="name"><span>Name</span>${value("name")}${icon("chevron")}</button>
-      <button type="button" class="srow" data-field="phone"><span>Phone</span>${value("phone")}${icon("chevron")}</button>
-      <div class="srow"><span>Email</span><b>${esc(user.email)}</b></div>
+      ${input("name")}${input("phone")}
+      <div class="srow"><span>Email</span><b data-email>${esc(user.email)}</b></div>
     </div>
-    <div class="group gap">
+    <p class="label">Sign-in</p>
+    <div class="group">
       <button type="button" class="srow" data-act="password"><span>Change password</span>${icon("chevron")}</button>
+      <button type="button" class="srow" data-act="others"><span>Sign out of other devices<small>This one stays signed in</small></span></button>
       <button type="button" class="srow danger" data-act="signout"><span>Sign out</span></button>
     </div>
     <p class="label">Danger zone</p>
     <button type="button" class="group danger-row" data-act="delete"><b>Delete my account</b>
-      <span>Removes your KlienKu account. Your leads stay in the Google Sheet.</span></button>
-  </div>`;
+      <span>Removes your KlienKu account and your notes. Your leads stay in the Google Sheet.</span></button>
+  </div>
+  <p class="foot">KlienKu · { kasah kod }</p>`);
   const box = root.querySelector(".account");
-  box.querySelectorAll("[data-field]").forEach(b=>b.addEventListener("click", ()=>fieldSheet(b.dataset.field, user[b.dataset.field], u=>{
+
+  // name and phone: saved when the box is left (or Done / Return is pressed); empty clears it
+  box.querySelectorAll(".inrow input").forEach(el=>{
+    el.addEventListener("keydown", e=>{ if (e.key==="Enter"){ e.preventDefault(); el.blur(); } });
+    el.addEventListener("change", async ()=>{
+      const key = el.name, v = el.value.trim();
+      if (v===(user[key] || "")) return;
+      try { Object.assign(user, await updateUser({ [key]: v })); el.value = v; toast(`${FIELDS[key].label} saved`); }
+      catch(err){ toast(err.message, true); el.value = user[key] || ""; }
+    });
+  });
+  // the server's copy, in case it changed on another device (a box being typed in is left alone)
+  currentUser().then(u=>{
+    if (!u || !root.contains(box)) return;
     Object.assign(user, u);
-    b.querySelector("b").outerHTML = value(b.dataset.field);
-  })));
+    box.querySelector("[data-email]").textContent = u.email;
+    box.querySelectorAll(".inrow input").forEach(el=>{ if (document.activeElement!==el) el.value = u[el.name] || ""; });
+  });
+
   box.querySelector('[data-act="password"]').addEventListener("click", passwordSheet);
+  box.querySelector('[data-act="others"]').addEventListener("click", async ()=>{
+    if (!await confirmDialog({ title: "Sign out other devices?", text: "Every other phone or computer signed in to KlienKu will need your password again.", ok: "Sign out" })) return;
+    try { await signOutOthers(); toast("Other devices signed out"); } catch(e){ toast(e.message, true); }
+  });
   box.querySelector('[data-act="delete"]').addEventListener("click", ()=>deleteSheet(user.email));
   box.querySelector('[data-act="signout"]').addEventListener("click", async ()=>{
     try { await turnOff().catch(()=>{}); await signOut(); forgetSheet(); location.replace("/signin"); }
@@ -117,8 +119,9 @@ function passwordSheet(){
 function deleteSheet(email){
   const sheet = openSheet(`
     <h2>Delete my account</h2>
-    <p class="sub">This deletes your KlienKu account (${esc(email)}) for good. It can't be undone.
+    <p class="sub">This deletes your KlienKu account (${esc(email)}) and your notes for good. It can't be undone.
       Your leads aren't touched: they stay in the Google Sheet.</p>
+    <p class="sub">Want your notes first? Settings → Data → Download leads and notes.</p>
     <label class="field"><span>Type DELETE to confirm</span><input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE"></label>
     <button class="btn btn-danger btn-lg" data-act="delete" disabled>Delete my account</button>
     <button type="button" class="link center" data-close>Cancel</button>`, "delete-account");
