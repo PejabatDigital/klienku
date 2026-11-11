@@ -25,7 +25,7 @@ Database changes (`migrations/`) must be applied before the code that needs them
 ## Backups
 - **Automatic:** Cloudflare D1 Time Travel keeps restore points for every minute of the
   last 7 days (Workers free plan; 30 days on paid). Nothing to set up.
-- **Your own copy:** Settings → Download my data (a CSV of every lead and its history).
+- **Your own copy:** Settings → Data → Download leads and notes (a CSV of every lead with its notes).
 
 To roll the live database back to a moment in time (this replaces everything after it):
 ```bash
