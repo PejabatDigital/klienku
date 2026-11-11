@@ -355,6 +355,8 @@ Phases (one at a time, each confirmed by Amin):
     a follow-up date ends it.
   - Phone Leads, Closed tab: status pills and groups like Active — Won first, then Closed
     (and any other finished status), newest contact first.
+  - Won leads are tinted green (`--won-soft`): phone cards and laptop table rows (`tr.won`,
+    green edge on the left; the selected row keeps its orange highlight).
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

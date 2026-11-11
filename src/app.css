@@ -47,6 +47,8 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .ccard:active{ background:#FBFAF8; }
 .ccard.s-overdue{ --bar:var(--overdue); } .ccard.s-today{ --bar:var(--today); }
 .ccard.s-won{ --bar:var(--won); } .ccard.s-closed{ --bar:#B5B1AA; } .ccard.s-none{ --bar:var(--none); }
+.ccard.s-won{ background:var(--won-soft); border-color:#C4E3CF; }
+.ccard.s-won:active{ background:#D5ECDD; }
 .ccard.s-hold{ --bar:#B5B1AA; } .ccard.s-hold .due{ color:var(--text-muted); font-weight:500; }
 .ccard-top{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
 .ccard-top b{ font-size:17px; line-height:24px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -389,6 +391,9 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   .ctable tr:last-child td{ border-bottom:0; }
   .ctable tbody tr{ cursor:pointer; }
   .ctable tbody tr:hover, .ctable tbody tr:focus{ background:#FBFAF8; outline:0; }
+  .ctable tbody tr.won:not(.sel){ background:var(--won-soft); }
+  .ctable tbody tr.won:not(.sel):hover, .ctable tbody tr.won:not(.sel):focus{ background:#D5ECDD; }
+  .ctable tbody tr.won:not(.sel) td:first-child{ box-shadow:inset 3px 0 0 var(--won); }
   .ctable td.muted{ color:var(--text-muted); }
   .ctable td.nw{ white-space:nowrap; }
   .ctable td.clip{ max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

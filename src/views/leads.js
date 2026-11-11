@@ -54,8 +54,9 @@ function table(list, tab, chosen){
   const cols = tab==="active"
     ? [...first, ["Next action", "clip mid", l=>esc(l.next_action) || "—"], ["Follow up", "nw", due], ...last]
     : [...first, ["Reason", "clip", l=>esc(l.reason) || "—"], ...last];
-  const rows = list.map(l=>`<tr data-id="${esc(l.id)}" tabindex="0"${l.id===chosen ? ' class="sel"' : ""}>${
-    cols.map(([, cls, cell])=>`<td${cls ? ` class="${cls}"` : ""}>${cell(l)}</td>`).join("")}</tr>`).join("");
+  const rows = list.map(l=>{ const cls = [/^won$/i.test(l.status) && "won", l.id===chosen && "sel"].filter(Boolean).join(" ");
+    return `<tr data-id="${esc(l.id)}" tabindex="0"${cls ? ` class="${cls}"` : ""}>${
+    cols.map(([, cls, cell])=>`<td${cls ? ` class="${cls}"` : ""}>${cell(l)}</td>`).join("")}</tr>`; }).join("");
   return `<div class="table-wrap"><table class="ctable"><thead><tr>${cols.map(([h, cls])=>`<th${cls ? ` class="${cls.replace(/ ?(muted|clip|short|mid|nw|name)\b/g, "")}"` : ""}>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
