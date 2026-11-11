@@ -308,7 +308,7 @@ interaction log. Build the base, then add to it.
   cards grouped by status, Mac table with Status/Project/Source filters and a sort, lead in a
   right panel. `/leads/:id` the profile: WhatsApp / Call, status, next action + follow-up
   date, what they want, source, last contacted, added, phone, notes, Open in Google Sheets
-  (V3.4: removed). Settings: Data, Account, About (V3.7).
+  (V3.4: removed). Settings: Account, Data, About (V3.7).
   Helpers in `src/leads.js`; the list is cached on the device (`kk:leads`).
 
 Phases (one at a time, each confirmed by Amin):
@@ -358,7 +358,7 @@ Phases (one at a time, each confirmed by Amin):
   - Won leads are tinted green (`--won-soft`): phone cards and laptop table rows (`tr.won`,
     green edge on the left; the selected row keeps its orange highlight).
 - **V3.7 Settings tidy-up** (asked by Amin 11 Nov 2026; phone and Mac):
-  - Settings menu: **Data · Account · About** (one card). Every page: title, then white
+  - Settings menu: **Account · Data · About** (one card; order asked by Amin 11 Nov 2026). Every page: title, then white
     cards under small headings (`.v-settings .label`), same foot. Pages draw at once from what
     the device has (`knownUser()`, `cachedSheet()`), then check the server.
   - Data (`/settings/data`): Open in Google Sheets (with "N leads · N active"), Refresh from

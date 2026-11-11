@@ -1,4 +1,4 @@
-/* Settings (Figma 6): a short menu — Data, Account, About — each its own page with Back.
+/* Settings (Figma 6): a short menu — Account, Data, About — each its own page with Back.
    Every page is the same: a title, then white cards on the background, each card under a
    small heading. Moving between them slides (see app.js). Pages draw straight away from
    what's saved on the device, so the slide never waits for the network.
@@ -168,8 +168,8 @@ export function settingsView(root, { id } = {}, { back } = {}){
   const row = (path, ic, label, sub) => `<a class="srow menu" href="/settings/${path}" data-link>${inner(ic, label, sub ? esc(sub) : "")}</a>`;
   root.innerHTML = `<header class="head"><h1>Settings</h1></header>
     <div class="group">
-      ${row("data", "sheet", "Data", sheet ? `Google Sheet · ${sheetLine(sheet)}` : "Google Sheet and download")}
       ${row("account", "user", "Account", user ? (user.name ? `${user.name} · ${user.email}` : user.email) : "")}
+      ${row("data", "sheet", "Data", sheet ? `Google Sheet · ${sheetLine(sheet)}` : "Google Sheet and download")}
       ${row("about", "info", "About", "Privacy and terms")}
     </div>${foot}`;
 }
