@@ -47,6 +47,7 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .ccard:active{ background:#FBFAF8; }
 .ccard.s-overdue{ --bar:var(--overdue); } .ccard.s-today{ --bar:var(--today); }
 .ccard.s-won{ --bar:var(--won); } .ccard.s-closed{ --bar:#B5B1AA; } .ccard.s-none{ --bar:var(--none); }
+.ccard.s-hold{ --bar:#B5B1AA; } .ccard.s-hold .due{ color:var(--text-muted); font-weight:500; }
 .ccard-top{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
 .ccard-top b{ font-size:17px; line-height:24px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .due{ flex:none; font-size:14px; font-weight:600; color:var(--bar); }
@@ -128,6 +129,7 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 .next.s-won{ --c:var(--won); --soft:var(--won-soft); }
 .next.s-closed{ --c:#9C978F; --soft:var(--subtle); }
 .next.s-none{ --c:var(--none); --soft:var(--none-soft); border-style:dashed; }
+.next.s-hold{ --c:var(--text-muted); --soft:var(--subtle); }
 .next .label{ margin:0 0 4px; color:var(--c); }
 .next h2{ display:flex; align-items:center; gap:8px; margin:0; font-size:20px; line-height:26px; }
 .next h2 .ic{ width:22px; height:22px; color:var(--c); }
@@ -139,12 +141,24 @@ body.has-tabs .view{ padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab
 /* Lead page: status, details, general notes */
 .status-row{ margin-top:16px; }
 .status-row .val{ color:var(--text); }
-.facts{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin:16px 0 0; }
-.facts dt{ font-size:12px; line-height:16px; color:var(--text-muted); }
-.facts dd{ margin:2px 0 0; font-weight:500; }
-.facts dd.none{ color:#A8A49D; font-weight:400; }
+.facts{ display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; margin:16px 0 0; padding:8px; }
+.fact{ display:block; align-self:start; min-width:0; padding:8px; border:0; border-radius:10px; background:none; font:inherit; color:var(--text); text-align:left; cursor:pointer; }
+.fact:hover, .fact:focus-visible{ background:var(--subtle); outline:0; }
+.fact:active{ background:var(--subtle); }
+.fact .dt{ display:flex; align-items:center; gap:4px; font-size:12px; line-height:16px; color:var(--text-muted); }
+.fact .dd{ display:block; margin-top:2px; font-weight:500; overflow-wrap:anywhere; white-space:pre-line; }
+.fact .dd.none{ color:#A8A49D; font-weight:400; }
 .facts .full{ grid-column:1 / -1; }
-.facts dd{ overflow-wrap:anywhere; }
+.ic.pen{ width:12px; height:12px; color:#B5B1AA; flex:none; }
+.name-edit{ display:inline; padding:0; border:0; background:none; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+.name-edit .ic.pen{ width:16px; height:16px; margin-left:8px; vertical-align:middle; }
+.name-edit:hover .ic.pen, .fact:hover .ic.pen{ color:var(--accent); }
+.next .btns .btn-white{ background:var(--surface); }
+.sheet h2 + form{ margin-top:14px; }
+.sheet h2 + form > .note:first-child{ margin-top:0; }
+.hold-btn{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; }
+.hold-btn .ic{ width:18px; height:18px; color:var(--text-muted); }
+.sheet .hold-btn + .hint{ text-align:center; margin-top:8px; }
 .status-row .val{ margin-left:auto; }
 .form .status-pick{ margin-top:20px; }
 .contact.one{ grid-template-columns:1fr; }
@@ -384,6 +398,7 @@ body.has-tabs .toast{ bottom:calc(env(safe-area-inset-bottom) + var(--tabbar-h) 
   .ctable th:first-child, .ctable td:first-child{ padding-left:16px; }
   .lwrap.open .ctable td.clip{ max-width:200px; }
   .ctable td b{ font-weight:600; }
+  .due-hold{ color:var(--text-muted); white-space:nowrap; }
   .due-overdue, .due-today, .due-none{ display:inline-flex; align-items:center; gap:6px; font-weight:600; white-space:nowrap; }
   .due-overdue{ color:var(--overdue); } .due-today{ color:var(--today); } .due-none{ color:var(--none); }
   .due-overdue i, .due-today i, .due-none i{ width:6px; height:6px; border-radius:50%; background:currentColor; }

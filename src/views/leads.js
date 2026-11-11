@@ -1,10 +1,10 @@
 /* Leads, from the Google Sheet (Figma 2; Mac: Figma 8). Phone: search, Active / Closed,
-   status pills, cards grouped by status. Wide screens: one table with filters (status,
+   status pills, cards grouped by status (Closed: Won, then Closed). Wide screens: one table with filters (status,
    project type, source) and a sort; a row opens the lead in a panel on the right
    (?c=<id> keeps it). Opens with what's saved on the device, then refreshes. */
 import { cachedSheet, loadSheet } from "../api.js";
 import { dayMonth, dueShort, status } from "../dates.js";
-import { byFollowUp, isClosed, isDate, statusList, statusName } from "../leads.js";
+import { byFollowUp, isClosed, isDate, isHold, statusList, statusName } from "../leads.js";
 import { card, esc, icon, isWide, problem, toast } from "../ui.js";
 import { leadView } from "./lead.js";
 
@@ -36,6 +36,7 @@ const shown = v => isDate(v) ? dayMonth(v) : v;
    lead is open beside it; "opt2" too under 1280 px. */
 function table(list, tab, chosen){
   const due = l => {
+    if (isHold(l)) return `<span class="due-hold">On hold</span>`;
     if (!isDate(l.follow_up)) return l.follow_up ? esc(l.follow_up) : `<span class="due-none"><i></i>No follow-up</span>`;
     const s = status(l.follow_up), text = s==="today" ? "Today" : dueShort(l.follow_up);
     return s==="upcoming" ? esc(text) : `<span class="due-${s}"><i></i>${esc(text)}</span>`;
@@ -96,21 +97,18 @@ function drawList(root, sheet, chosen){
     html = list.length ? table(list, view.tab, chosen) : "";
     root.querySelector(".shown").textContent = anyFilter() || view.q ? `Showing ${list.length} of ${leads.filter(l=>tabOf(l)===view.tab).length}` : "";
   } else {
-    // status pills: only statuses that have leads (and the one chosen)
-    filters.hidden = !active;
-    filters.innerHTML = ["all", ...stages].map(s=>{
+    // status pills (only statuses that have leads, and the one chosen), then cards grouped
+    // by status: Active in the sheet's order; Closed as Won, then Closed (and any others)
+    const groups = active ? stages : statusList(sheet).filter(s=>isClosed({ status: s }))
+      .sort((a, b)=>(/^won$/i.test(b) ? 1 : 0) - (/^won$/i.test(a) ? 1 : 0));
+    filters.innerHTML = ["all", ...groups].map(s=>{
       const n = s==="all" ? inTab.length : inTab.filter(l=>l.status===s).length;
       return n || s==="all" || view.stage===s ? `<button type="button" class="pill${view.stage===s ? " on" : ""}" data-stage="${esc(s)}">${esc(s==="all" ? "All" : statusName(s))} · ${n}</button>` : "";
     }).join("");
-    if (active){
-      html = stages.filter(s=>view.stage==="all" || s===view.stage).map(s=>{
-        const group = inTab.filter(l=>l.status===s).sort(byFollowUp);
-        return group.length ? `<h2 class="section">${esc(statusName(s))} <span>${group.length}</span></h2><div class="cards">${group.map(card).join("")}</div>` : "";
-      }).join("");
-    } else {
-      const group = inTab.sort(byContact);
-      html = group.length ? `<div class="cards">${group.map(card).join("")}</div>` : "";
-    }
+    html = groups.filter(s=>view.stage==="all" || s===view.stage).map(s=>{
+      const group = inTab.filter(l=>l.status===s).sort(active ? byFollowUp : byContact);
+      return group.length ? `<h2 class="section">${esc(statusName(s))} <span>${group.length}</span></h2><div class="cards">${group.map(card).join("")}</div>` : "";
+    }).join("");
   }
   root.querySelector(".list").innerHTML = html || `<div class="empty small"><p>${
     view.q ? `No leads match “${esc(view.q)}”.` : !leads.length ? "No leads in the sheet yet."

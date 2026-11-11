@@ -9,9 +9,15 @@ import { status as dueStatus } from "./dates.js";
 export const isClosed = l => /^(closed|won|lost|stopped)$/i.test(l.status || "");
 export const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "");
 
-/* The colour of a lead: overdue | today | upcoming | none (no follow-up date), or won | closed. */
+/* "No action for now": the discussion is on hold, so no follow-up is needed. Saved in the
+   sheet's Next Action column as the text NO_ACTION (anything starting "No action" counts). */
+export const NO_ACTION = "No action";
+export const isHold = l => /^no action\b/i.test(l.next_action || "") && !isDate(l.follow_up);
+
+/* The colour of a lead: overdue | today | upcoming | none (no follow-up date) | hold (no
+   action for now), or won | closed. */
 export const leadState = l => isClosed(l) ? (/^won$/i.test(l.status) ? "won" : "closed")
-  : isDate(l.follow_up) ? dueStatus(l.follow_up) : "none";
+  : isDate(l.follow_up) ? dueStatus(l.follow_up) : isHold(l) ? "hold" : "none";
 
 /* Statuses in the sheet's order; then any a lead has that the list doesn't (old or typed). */
 export function statusList(sheet){

@@ -342,6 +342,19 @@ Phases (one at a time, each confirmed by Amin):
     Phone, Project, Location, What they want, Next action, Follow up, Last contact, Status
     (Closed tab: Reason instead of Next action + Follow up). Default sort First contact,
     newest. Search also looks in notes. Phone cards unchanged.
+- **V3.6 Edit on the lead page + "No action"** (asked by Amin 11 Nov 2026; phone and Mac):
+  - Lead page: tap the name or any detail (what they want, phone, location, project type,
+    source, last contacted, first contact) → a small sheet for that one field, saved to the
+    sheet straight away (PATCH with only that field). Next action card has Change (or Set
+    next action): next action + follow-up date. Closed (not Won): Change reason. Edit (full
+    form + Delete) stays.
+  - **No action for now** (in the Next action sheet): for when the discussion is on hold.
+    Writes "No action" in the sheet's Next Action column and clears Next Follow-up.
+    `isHold()` / `NO_ACTION` in `src/leads.js`; `leadState` "hold" (grey, not the mustard
+    "No follow-up" warning): card says "On hold", table Follow up says "On hold". Setting
+    a follow-up date ends it.
+  - Phone Leads, Closed tab: status pills and groups like Active — Won first, then Closed
+    (and any other finished status), newest contact first.
 
 ## Design
 **Source of truth:** Figma "Lead Follow-up App"

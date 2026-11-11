@@ -29,6 +29,8 @@ const PATHS = {
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
   sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
   archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
 };
 export const icon = (name, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${PATHS[name]}</svg>`;
@@ -38,10 +40,10 @@ export const icon = (name, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 
 export function card(l){
   const s = leadState(l), closed = s==="closed" || s==="won";
   const sub = [l.type, l.location].filter(Boolean).join(" · ");
-  const right = closed ? statusName(l.status) : isDate(l.follow_up) ? dueShort(l.follow_up) : "No follow-up";
+  const right = closed ? statusName(l.status) : isDate(l.follow_up) ? dueShort(l.follow_up) : s==="hold" ? "On hold" : "No follow-up";
   const chips = closed
     ? (l.reason ? `<span class="chip chip-stage">${esc(l.reason)}</span>` : "")
-    : (l.next_action ? `<span class="chip chip-${s==="none" ? "plain" : s}">${icon("clock")}${esc(l.next_action)}</span>` : "")
+    : (l.next_action ? `<span class="chip chip-${s==="none" || s==="hold" ? "plain" : s}">${icon(s==="hold" ? "pause" : "clock")}${esc(l.next_action)}</span>` : "")
       + `<span class="chip chip-stage">${esc(statusName(l.status))}</span>`;
   return `<a class="ccard s-${s}" href="/leads/${l.id}" data-link>
     <div class="ccard-top"><b>${esc(l.name || "No name")}</b><span class="due">${esc(right)}</span></div>
